@@ -1,0 +1,231 @@
+import { Router, Response } from 'express';
+import prisma from '../utils/prisma';
+import { authenticate, AuthRequest } from '../middleware/auth';
+
+const router = Router();
+router.use(authenticate);
+
+// GET /api/partners
+router.get('/', async (req: AuthRequest, res: Response) => {
+    try {
+        const { type, status, search } = req.query;
+        let where: any = {};
+
+        // Filter by type
+        if (type && type !== 'all') {
+            where.partnerType = (type as string).toUpperCase();
+        }
+
+        // Filter by status
+        if (status && status !== 'all') {
+            where.status = (status as string).toUpperCase();
+        }
+
+        // Search
+        if (search) {
+            where.OR = [
+                { partnerName: { contains: search as string, mode: 'insensitive' } },
+                { partnerId: { contains: search as string, mode: 'insensitive' } },
+                { taxCode: { contains: search as string, mode: 'insensitive' } }
+            ];
+        }
+
+        const partners = await prisma.partner.findMany({
+            where,
+            include: {
+                bankAccounts: true,
+                contracts: true,
+                paymentMethod: true
+            },
+            orderBy: { partnerId: 'asc' }
+        });
+
+        res.json(partners);
+    } catch (error) {
+        console.error('Get partners error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// GET /api/partners/:id
+router.get('/:id', async (req: AuthRequest, res: Response) => {
+    try {
+        const partner = await prisma.partner.findUnique({
+            where: { id: req.params.id as string },
+            include: {
+                bankAccounts: true,
+                contracts: true,
+                paymentMethod: true
+            }
+        });
+
+        if (!partner) {
+            return res.status(404).json({ error: 'Partner not found' });
+        }
+
+        res.json(partner);
+    } catch (error) {
+        console.error('Get partner error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// POST /api/partners
+router.post('/', async (req: AuthRequest, res: Response) => {
+    try {
+        const { bankAccounts, contracts, ...partnerData } = req.body;
+
+        // Sanitize relations
+        if (partnerData.paymentMethodId === '') {
+            partnerData.paymentMethodId = null;
+        }
+
+        // Check for existing partnerId or taxCode
+        const existing = await prisma.partner.findFirst({
+            where: {
+                OR: [
+                    { partnerId: partnerData.partnerId },
+                    { taxCode: partnerData.taxCode }
+                ]
+            }
+        });
+
+        if (existing) {
+            if (existing.partnerId === partnerData.partnerId) {
+                return res.status(400).json({ error: `Mã đối tác '${partnerData.partnerId}' đã tồn tại` });
+            }
+            if (existing.taxCode === partnerData.taxCode) {
+                return res.status(400).json({ error: `Mã số thuế '${partnerData.taxCode}' đã tồn tại` });
+            }
+        }
+
+        const partner = await prisma.partner.create({
+            data: {
+                ...partnerData,
+                bankAccounts: bankAccounts ? {
+                    create: bankAccounts
+                } : undefined,
+                contracts: contracts ? {
+                    create: contracts
+                } : undefined
+            },
+            include: {
+                bankAccounts: true,
+                contracts: true,
+                paymentMethod: true
+            }
+        });
+
+        res.status(201).json(partner);
+    } catch (error: any) {
+        console.error('Create partner error:', error);
+        // Prisma unique constraint violation code
+        if (error.code === 'P2002') {
+            const field = error.meta?.target?.join(', ');
+            return res.status(400).json({ error: `${field} đã tồn tại` });
+        }
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+});
+
+// PUT /api/partners/:id
+router.put('/:id', async (req: AuthRequest, res: Response) => {
+    try {
+        const { bankAccounts, contracts, ...partnerData } = req.body;
+
+        const updateData: any = { ...partnerData };
+
+        // Sanitize relations
+        if (updateData.paymentMethodId === '') {
+            updateData.paymentMethodId = null;
+        }
+
+        if (bankAccounts) {
+            updateData.bankAccounts = {
+                deleteMany: {},
+                create: bankAccounts
+            };
+        }
+
+        if (contracts) {
+            updateData.contracts = {
+                deleteMany: {},
+                create: contracts
+            };
+        }
+
+        const partner = await prisma.partner.update({
+            where: { id: req.params.id },
+            data: updateData,
+            include: {
+                bankAccounts: true,
+                contracts: true,
+                paymentMethod: true
+            }
+        });
+
+        res.json(partner);
+    } catch (error: any) {
+        console.error('Update partner error:', error);
+        if (error.code === 'P2002') {
+            const field = error.meta?.target?.join(', ');
+            return res.status(400).json({ error: `${field} đã tồn tại` });
+        }
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+});
+
+// PUT /api/partners/:id/deactivate
+router.put('/:id/deactivate', async (req: AuthRequest, res: Response) => {
+    try {
+        const partner = await prisma.partner.update({
+            where: { id: req.params.id as string },
+            data: { status: 'INACTIVE' },
+            include: {
+                bankAccounts: true,
+                contracts: true
+            }
+        });
+
+        res.json(partner);
+    } catch (error) {
+        console.error('Deactivate partner error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// POST /api/partners/:id/bank-accounts
+router.post('/:id/bank-accounts', async (req: AuthRequest, res: Response) => {
+    try {
+        const bankAccount = await prisma.bankAccount.create({
+            data: {
+                ...req.body,
+                partnerId: req.params.id as string
+            }
+        });
+
+        res.status(201).json(bankAccount);
+    } catch (error) {
+        console.error('Create bank account error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// POST /api/partners/:id/contracts
+router.post('/:id/contracts', async (req: AuthRequest, res: Response) => {
+    try {
+        const contract = await prisma.contract.create({
+            data: {
+                ...req.body,
+                partnerId: req.params.id as string
+            }
+        });
+
+        res.status(201).json(contract);
+    } catch (error) {
+        console.error('Create contract error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+export default router;

@@ -1,0 +1,406 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(uuid())
+  email        String         @unique
+  password     String
+  name         String
+  avatar       String?
+  buId         String?        @map("bu_id")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  dataScope    String         @default("personal") @map("data_scope")
+  fullName     String?        @map("full_name")
+  lastLogin    DateTime?      @map("last_login")
+  roleId       String?        @map("role_id")
+  status       String         @default("active")
+  twoFAEnabled Boolean        @default(false) @map("two_fa_enabled")
+  activityLogs ActivityLog[]
+  loginHistory LoginHistory[]
+  businessUnit BusinessUnit?  @relation(fields: [buId], references: [id])
+  role         Role?          @relation(fields: [roleId], references: [id])
+
+  @@map("users")
+}
+
+model Role {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  description  String?
+  permissions  Json?
+  isSystemRole Boolean  @default(false) @map("is_system_role")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  users        User[]
+
+  @@map("roles")
+}
+
+model LoginHistory {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  timestamp DateTime @default(now())
+  ip        String?
+  device    String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("login_history")
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String?  @map("user_id")
+  timestamp   DateTime @default(now())
+  action      String
+  module      String
+  description String
+  ip          String?
+  status      String   @default("success")
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@map("activity_logs")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  category    String   @default("general")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+
+model BusinessUnit {
+  id           String        @id @default(uuid())
+  name         String        @unique
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  code         String?       @unique
+  leaderName   String?       @map("leader_name")
+  staffCount   Int           @default(0) @map("staff_count")
+  startDate    DateTime?     @map("start_date")
+  status       String        @default("active")
+  employees    Employee[]
+  transactions Transaction[]
+  users        User[]
+
+  @@map("business_units")
+}
+
+model Employee {
+  id               String          @id @default(uuid())
+  employeeId       String          @unique @map("employee_id")
+  fullName         String          @map("full_name")
+  email            String          @unique
+  phone            String
+  businessUnitId   String          @map("business_unit_id")
+  specializationId String?         @map("specialization_id")
+  levelId          String?         @map("level_id")
+  joinDate         DateTime?       @map("join_date")
+  workStatus       WorkStatus      @default(WORKING) @map("work_status")
+  birthDate        DateTime?       @map("birth_date")
+  idCard           String?         @map("id_card")
+  address          String
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+  businessUnit     BusinessUnit    @relation(fields: [businessUnitId], references: [id])
+  level            EmployeeLevel?  @relation(fields: [levelId], references: [id])
+  specialization   Specialization? @relation(fields: [specializationId], references: [id])
+  transactions     Transaction[]
+
+  @@map("employees")
+}
+
+model Partner {
+  id                  String         @id @default(uuid())
+  partnerId           String         @unique @map("partner_id")
+  partnerName         String         @map("partner_name")
+  partnerType         PartnerType    @map("partner_type")
+  taxCode             String         @unique @map("tax_code")
+  phone               String
+  contactPerson       String         @map("contact_person")
+  status              PartnerStatus  @default(ACTIVE)
+  address             String
+  email               String
+  representativeName  String         @map("representative_name")
+  representativeTitle String         @map("representative_title")
+  representativePhone String         @map("representative_phone")
+  paymentMethodId     String?        @map("payment_method_id")
+  paymentTerm         Int            @default(30) @map("payment_term")
+  balance             Float          @default(0)
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+  bankAccounts        BankAccount[]
+  contracts           Contract[]
+  paymentMethod       PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+  transactions        Transaction[]
+
+  @@map("partners")
+}
+
+model Transaction {
+  id                 String                  @id @default(uuid())
+  transactionCode    String                  @unique @map("transaction_code")
+  transactionDate    DateTime                @map("transaction_date")
+  transactionType    TransactionType         @map("transaction_type")
+  categoryId         String                  @map("category_id")
+  projectId          String?                 @map("project_id")
+  objectType         ObjectType              @map("object_type")
+  partnerId          String?                 @map("partner_id")
+  employeeId         String?                 @map("employee_id")
+  paymentMethodId    String?                 @map("payment_method_id")
+  businessUnitId     String                  @map("business_unit_id")
+  amount             Float
+  costAllocation     CostAllocation          @map("cost_allocation")
+  allocationRuleId   String?                 @map("allocation_rule_id")
+  paymentStatus      PaymentStatus           @default(UNPAID) @map("payment_status")
+  approvalStatus     ApprovalStatus          @default(DRAFT) @map("approval_status")
+  rejectionReason    String?                 @map("rejection_reason")
+  description        String
+  createdBy          String?                 @map("created_by")
+  createdAt          DateTime                @default(now()) @map("created_at")
+  updatedAt          DateTime                @updatedAt @map("updated_at")
+  isAdvance          Boolean                 @default(false) @map("is_advance")
+  allocationPreviews AllocationPreview[]
+  attachments        TransactionAttachment[]
+  allocationRule     AllocationRule?         @relation(fields: [allocationRuleId], references: [id])
+  businessUnit       BusinessUnit            @relation(fields: [businessUnitId], references: [id])
+  category           Category                @relation(fields: [categoryId], references: [id])
+  employee           Employee?               @relation(fields: [employeeId], references: [id])
+  partner            Partner?                @relation(fields: [partnerId], references: [id])
+  paymentMethod      PaymentMethod?          @relation(fields: [paymentMethodId], references: [id])
+  project            Project?                @relation(fields: [projectId], references: [id])
+
+  @@map("transactions")
+}
+
+model Category {
+  id           String         @id @default(uuid())
+  code         String         @unique
+  name         String
+  type         CategoryType
+  description  String
+  status       CategoryStatus @default(ACTIVE)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  transactions Transaction[]
+
+  @@map("categories")
+}
+
+model Project {
+  id           String        @id @default(uuid())
+  code         String        @unique
+  name         String
+  description  String?
+  startDate    DateTime      @map("start_date")
+  endDate      DateTime?     @map("end_date")
+  status       String        @default("ACTIVE")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  buOwner      String?       @map("bu_owner")
+  budget       Float         @default(0)
+  pm           String?
+  spent        Float         @default(0)
+  transactions Transaction[]
+
+  @@map("projects")
+}
+
+model Specialization {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  code        String     @unique
+  description String?
+  employees   Employee[]
+
+  @@map("specializations")
+}
+
+model EmployeeLevel {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  order       Int        @default(0)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  code        String     @unique
+  description String?
+  employees   Employee[]
+
+  @@map("employee_levels")
+}
+
+model PaymentMethod {
+  id           String        @id @default(uuid())
+  name         String        @unique
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  partners     Partner[]
+  transactions Transaction[]
+
+  @@map("payment_methods")
+}
+
+model AllocationRule {
+  id           String        @id @default(uuid())
+  name         String        @unique
+  description  String?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  /// Array of {buId: string, percentage: number}
+  allocations  Json?
+  transactions Transaction[]
+
+  @@map("allocation_rules")
+}
+
+model BankAccount {
+  id            String   @id @default(uuid())
+  partnerId     String   @map("partner_id")
+  accountNumber String   @map("account_number")
+  bankName      String   @map("bank_name")
+  branch        String
+  swiftCode     String?  @map("swift_code")
+  isDefault     Boolean  @default(false) @map("is_default")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  partner       Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@map("bank_accounts")
+}
+
+model Contract {
+  id             String   @id @default(uuid())
+  partnerId      String   @map("partner_id")
+  contractNumber String   @unique @map("contract_number")
+  signDate       DateTime @map("sign_date")
+  expiryDate     DateTime @map("expiry_date")
+  value          Float
+  fileName       String?  @map("file_name")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  partner        Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@map("contracts")
+}
+
+model TransactionAttachment {
+  id            String      @id @default(uuid())
+  transactionId String      @map("transaction_id")
+  fileName      String      @map("file_name")
+  fileSize      Int         @map("file_size")
+  fileType      String      @map("file_type")
+  fileUrl       String      @map("file_url")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@map("transaction_attachments")
+}
+
+model AllocationPreview {
+  id            String      @id @default(uuid())
+  transactionId String      @map("transaction_id")
+  buName        String      @map("bu_name")
+  percentage    Float
+  amount        Float
+  createdAt     DateTime    @default(now()) @map("created_at")
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@map("allocation_previews")
+}
+
+model SystemSequence {
+  key   String @id
+  value Int    @default(0)
+
+  @@map("system_sequences")
+}
+
+enum WorkStatus {
+  WORKING
+  PROBATION
+  RESIGNED
+
+  @@map("work_status")
+}
+
+enum PartnerType {
+  CUSTOMER
+  SUPPLIER
+  BOTH
+
+  @@map("partner_type")
+}
+
+enum PartnerStatus {
+  ACTIVE
+  INACTIVE
+
+  @@map("partner_status")
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  LOAN
+
+  @@map("transaction_type")
+}
+
+enum ObjectType {
+  PARTNER
+  EMPLOYEE
+
+  @@map("object_type")
+}
+
+enum CostAllocation {
+  DIRECT
+  INDIRECT
+
+  @@map("cost_allocation")
+}
+
+enum PaymentStatus {
+  PAID
+  UNPAID
+
+  @@map("payment_status")
+}
+
+enum ApprovalStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+
+  @@map("approval_status")
+}
+
+enum CategoryType {
+  THU
+  CHI
+  VAY
+  HOAN_UNG
+
+  @@map("category_type")
+}
+
+enum CategoryStatus {
+  ACTIVE
+  INACTIVE
+
+  @@map("category_status")
+}
