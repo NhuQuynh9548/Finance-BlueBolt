@@ -48,7 +48,8 @@ interface Transaction {
   costAllocation: 'DIRECT' | 'INDIRECT';
   allocationRuleId?: string;
   isAdvance: boolean;
-  allocationPreviews?: any; // Simplified for now
+  studentName?: string;
+  otherName?: string;
   attachments?: TransactionFile[];
   paymentStatus: 'PAID' | 'UNPAID';
   approvalStatus: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
@@ -306,6 +307,8 @@ export function QuanLyThuChi() {
       isAdvance: false,
       businessUnitId: (selectedBU !== 'all' ? selectedBU : (businessUnits.length > 0 ? businessUnits[0].id : '')),
       objectType: type === 'LOAN' ? 'EMPLOYEE' : 'PARTNER',
+      studentName: '',
+      otherName: '',
       paymentMethodId: paymentMethods.length > 0 ? paymentMethods[0].id : '',
       description: ''
     });
@@ -424,63 +427,51 @@ export function QuanLyThuChi() {
         allocationPreviews: previews
       };
 
-      // Handle Bulk Creation for "All Employees in BU"
+      // Handle "All Employees in BU" - Now creates a SINGLE transaction
       if (formData.objectType === 'EMPLOYEE' && formData.employeeId === 'ALL_IN_BU') {
         if (!formData.businessUnitId) {
-          alert('Vui lòng chọn Business Unit để thực hiện tạo phiếu cho tất cả nhân viên');
+          alert('Vui lòng chọn Business Unit');
           return;
         }
 
-        const buEmployees = employees.filter(e => e.businessUnitId === formData.businessUnitId || e.businessUnit === businessUnits.find(bu => bu.id === formData.businessUnitId)?.name);
+        const buName = businessUnits.find(bu => bu.id === formData.businessUnitId)?.name || '';
+        payload.employeeId = undefined; // No specific employee
+        payload.description = `[Tất cả nhân viên BU ${buName}] ${payload.description || ''}`;
+      }
+      // Normal single creation
+      // Clean up payload based on object type
+      if (payload.objectType === 'PARTNER') {
+        payload.employeeId = undefined;
+        payload.studentName = undefined;
+        payload.otherName = undefined;
+      } else if (payload.objectType === 'EMPLOYEE') {
+        payload.partnerId = undefined;
+        payload.studentName = undefined;
+        payload.otherName = undefined;
+      } else if (payload.objectType === 'STUDENT') {
+        payload.partnerId = undefined;
+        payload.employeeId = undefined;
+        payload.otherName = undefined;
+      } else if (payload.objectType === 'OTHER') {
+        payload.partnerId = undefined;
+        payload.employeeId = undefined;
+        payload.studentName = undefined;
+      }
 
-        if (buEmployees.length === 0) {
-          alert('Không tìm thấy nhân viên nào thuộc BU này');
-          return;
-        }
+      // Clean up allocation
+      if (payload.costAllocation === 'DIRECT') {
+        payload.allocationRuleId = undefined;
+      }
 
-        if (confirm(`Hệ thống sẽ tạo ${buEmployees.length} phiếu ${modalType === 'INCOME' ? 'thu' : modalType === 'EXPENSE' ? 'chi' : 'vay'} cho tất cả nhân viên thuộc BU này. Bạn có chắc chắn?`)) {
-          setLoading(true);
-          try {
-            await Promise.all(buEmployees.map(emp => {
-              const { employeeId, ...txnDataWithoutEmpId } = payload;
-              return transactionService.create({
-                ...txnDataWithoutEmpId,
-                employeeId: emp.id
-              });
-            }));
-            alert(`Đã tạo thành công ${buEmployees.length} giao dịch.`);
-          } catch (err: any) {
-            console.error('Bulk creation error:', err);
-            alert('Lỗi khi tạo hàng loạt giao dịch: ' + (err.response?.data?.error || err.message));
-          }
-        } else {
-          setLoading(false);
-          return;
-        }
-      } else {
-        // Normal single creation
-        // Clean up payload based on object type
-        if (payload.objectType === 'PARTNER') {
-          payload.employeeId = undefined;
-        } else {
-          payload.partnerId = undefined;
-        }
+      // Ensure businessUnitId is NEVER undefined (database constraint)
+      if (!payload.businessUnitId && businessUnits.length > 0) {
+        payload.businessUnitId = businessUnits[0].id;
+      }
 
-        // Clean up allocation
-        if (payload.costAllocation === 'DIRECT') {
-          payload.allocationRuleId = undefined;
-        }
-
-        // Ensure businessUnitId is NEVER undefined (database constraint)
-        if (!payload.businessUnitId && businessUnits.length > 0) {
-          payload.businessUnitId = businessUnits[0].id;
-        }
-
-        if (modalMode === 'create') {
-          await transactionService.create(payload);
-        } else if (modalMode === 'edit' && formData.id) {
-          await transactionService.update(formData.id, payload);
-        }
+      if (modalMode === 'create') {
+        await transactionService.create(payload);
+      } else if (modalMode === 'edit' && formData.id) {
+        await transactionService.update(formData.id, payload);
       }
 
       setModalMode(null);
@@ -540,7 +531,11 @@ export function QuanLyThuChi() {
 
   const getObjectName = (txn: Transaction) => {
     if (txn.objectType === 'PARTNER') return txn.partner?.partnerName;
-    if (txn.objectType === 'EMPLOYEE') return txn.employee?.fullName;
+    if (txn.objectType === 'EMPLOYEE') {
+      return txn.employee?.fullName || `Tất cả nhân viên (${txn.businessUnit?.name || 'N/A'})`;
+    }
+    if (txn.objectType === 'STUDENT') return txn.studentName || '-';
+    if (txn.objectType === 'OTHER') return txn.otherName || '-';
     return '-';
   };
 
@@ -762,9 +757,10 @@ export function QuanLyThuChi() {
             key={type}
             onClick={() => setFilterType(type)}
             className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === type
-              ? 'bg-blue-700 text-white shadow-sm'
+              ? 'text-white shadow-sm'
               : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
               }`}
+            style={filterType === type ? { backgroundColor: '#004aad', borderColor: '#004aad' } : {}}
           >
             {type === 'all' ? 'Tất cả' : type === 'INCOME' ? 'THU' : type === 'EXPENSE' ? 'CHI' : 'VAY'}
           </button>
@@ -890,19 +886,21 @@ export function QuanLyThuChi() {
                     Thông tin giao dịch
                   </h3>
                   <div className="grid grid-cols-2 gap-x-8 gap-y-5">
-                    <div className="col-span-2 flex items-center gap-2 mb-1">
-                      <input
-                        type="checkbox"
-                        id="isAdvance"
-                        checked={formData.isAdvance || false}
-                        onChange={e => setFormData({ ...formData, isAdvance: e.target.checked })}
-                        disabled={modalMode === 'view'}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <label htmlFor="isAdvance" className="text-sm font-semibold text-gray-700 cursor-pointer">
-                        Đây là phiếu dự chi (Advance Payment)
-                      </label>
-                    </div>
+                    {modalType !== 'INCOME' && modalType !== 'LOAN' && (
+                      <div className="col-span-2 flex items-center gap-2 mb-1">
+                        <input
+                          type="checkbox"
+                          id="isAdvance"
+                          checked={formData.isAdvance || false}
+                          onChange={e => setFormData({ ...formData, isAdvance: e.target.checked })}
+                          disabled={modalMode === 'view'}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="isAdvance" className="text-sm font-semibold text-gray-700 cursor-pointer">
+                          Đây là phiếu dự chi (Advance Payment)
+                        </label>
+                      </div>
+                    )}
                     <div>
                       <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
                         Mã Giao Dịch (Auto)
@@ -985,7 +983,15 @@ export function QuanLyThuChi() {
                             formData.costAllocation === 'INDIRECT'
                           }
                           value={formData.costAllocation === 'INDIRECT' ? 'indirect' : (formData.businessUnitId || '')}
-                          onChange={e => setFormData({ ...formData, businessUnitId: e.target.value })}
+                          onChange={e => {
+                            const newBuId = e.target.value;
+                            setFormData({
+                              ...formData,
+                              businessUnitId: newBuId,
+                              partnerId: undefined,
+                              employeeId: undefined
+                            });
+                          }}
                           className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#1E6BB8] outline-none appearance-none bg-white transition-all disabled:bg-gray-50 disabled:text-gray-500"
                           style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
                         >
@@ -1041,39 +1047,86 @@ export function QuanLyThuChi() {
                         />
                         <span className={`text-sm font-semibold ${formData.objectType === 'EMPLOYEE' ? 'text-gray-900' : 'text-gray-500'}`}>Nhân viên</span>
                       </label>
+                      {modalType === 'INCOME' && (
+                        <label className="flex items-center cursor-pointer gap-2.5 group">
+                          <input
+                            type="radio"
+                            name="objectType"
+                            checked={formData.objectType === 'STUDENT'}
+                            onChange={() => setFormData({ ...formData, objectType: 'STUDENT' })}
+                            disabled={modalMode === 'view'}
+                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          />
+                          <span className={`text-sm font-semibold ${formData.objectType === 'STUDENT' ? 'text-gray-900' : 'text-gray-500'}`}>Học viên</span>
+                        </label>
+                      )}
+                      {modalType === 'LOAN' && (
+                        <label className="flex items-center cursor-pointer gap-2.5 group">
+                          <input
+                            type="radio"
+                            name="objectType"
+                            checked={formData.objectType === 'OTHER'}
+                            onChange={() => setFormData({ ...formData, objectType: 'OTHER' })}
+                            disabled={modalMode === 'view'}
+                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          />
+                          <span className={`text-sm font-semibold ${formData.objectType === 'OTHER' ? 'text-gray-900' : 'text-gray-500'}`}>Khác</span>
+                        </label>
+                      )}
                     </div>
                     <div>
                       <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
-                        <span className="text-red-500 font-bold">*</span> {formData.objectType === 'PARTNER' ? 'Đối tác' : 'Nhân viên'}
+                        <span className="text-red-500 font-bold">*</span> {
+                          formData.objectType === 'PARTNER' ? 'Đối tác' :
+                            formData.objectType === 'EMPLOYEE' ? 'Nhân viên' :
+                              (modalType === 'LOAN' && formData.objectType === 'OTHER') ? 'Đối tượng vay khác' :
+                                'Học viên'
+                        }
                       </label>
                       <div className="relative">
-                        <select
-                          required
-                          disabled={modalMode === 'view'}
-                          value={(formData.objectType === 'PARTNER' ? formData.partnerId : formData.employeeId) || ''}
-                          onChange={e => setFormData({ ...formData, [formData.objectType === 'PARTNER' ? 'partnerId' : 'employeeId']: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none bg-white"
-                          style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
-                        >
-                          <option value="">Chọn...</option>
-                          {formData.objectType === 'PARTNER'
-                            ? partners.map(p => <option key={p.id} value={p.id}>{p.partnerName}</option>)
-                            : (
-                              <>
-                                {formData.businessUnitId && (
-                                  <option value="ALL_IN_BU" className="font-bold text-blue-600">
-                                    --- TẤT CẢ NHÂN VIÊN THUỘC {businessUnits.find(bu => bu.id === formData.businessUnitId)?.name.toUpperCase()} ---
-                                  </option>
-                                )}
-                                {employees
-                                  .filter(e => !formData.businessUnitId || e.businessUnitId === formData.businessUnitId || e.businessUnit === businessUnits.find(bu => bu.id === formData.businessUnitId)?.name)
-                                  .map(e => <option key={e.id} value={e.id}>{e.fullName}</option>)
-                                }
-                              </>
-                            )
-                          }
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        {formData.objectType === 'STUDENT' || formData.objectType === 'OTHER' ? (
+                          <input
+                            type="text"
+                            required
+                            disabled={modalMode === 'view'}
+                            placeholder={formData.objectType === 'STUDENT' ? "Nhập tên học viên..." : "Nhập người vay/cho vay..."}
+                            value={(formData.objectType === 'STUDENT' ? formData.studentName : formData.otherName) || ''}
+                            onChange={e => setFormData({ ...formData, [formData.objectType === 'STUDENT' ? 'studentName' : 'otherName']: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                          />
+                        ) : (
+                          <>
+                            <select
+                              required
+                              disabled={modalMode === 'view'}
+                              value={(formData.objectType === 'PARTNER' ? formData.partnerId : formData.employeeId) || ''}
+                              onChange={e => setFormData({ ...formData, [formData.objectType === 'PARTNER' ? 'partnerId' : 'employeeId']: e.target.value })}
+                              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none bg-white font-medium"
+                              style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
+                            >
+                              <option value="">Chọn...</option>
+                              {formData.objectType === 'PARTNER'
+                                ? partners
+                                  .filter(p => !formData.businessUnitId || p.businessUnitId === formData.businessUnitId || p.businessUnit?.name === businessUnits.find(bu => bu.id === formData.businessUnitId)?.name)
+                                  .map(p => <option key={p.id} value={p.id}>{p.partnerName}</option>)
+                                : (
+                                  <>
+                                    {formData.businessUnitId && (
+                                      <option value="ALL_IN_BU" className="font-bold text-blue-600">
+                                        --- TẤT CẢ NHÂN VIÊN THUỘC {businessUnits.find(bu => bu.id === formData.businessUnitId)?.name.toUpperCase()} ---
+                                      </option>
+                                    )}
+                                    {employees
+                                      .filter(e => !formData.businessUnitId || e.businessUnitId === formData.businessUnitId || e.businessUnit === businessUnits.find(bu => bu.id === formData.businessUnitId)?.name)
+                                      .map(e => <option key={e.id} value={e.id}>{e.fullName}</option>)
+                                    }
+                                  </>
+                                )
+                              }
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          </>
+                        )}
                       </div>
                     </div>
                     <div>
@@ -1119,10 +1172,10 @@ export function QuanLyThuChi() {
                 <div>
                   <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                     <span className="w-1 h-4 bg-blue-600 rounded-full"></span>
-                    Số tiền và phân bổ chi phí
+                    Số tiền {modalType !== 'INCOME' && modalType !== 'LOAN' && 'và phân bổ chi phí'}
                   </h3>
                   <div className="grid grid-cols-2 gap-x-8 gap-y-5">
-                    <div>
+                    <div className={(modalType === 'INCOME' || modalType === 'LOAN') ? 'col-span-2' : ''}>
                       <label className="block text-[13px] font-semibold text-gray-600 mb-1.5">
                         <span className="text-gray-400 font-bold mr-1">$</span> <span className="text-red-500 font-bold">*</span> Số Tiền (VND)
                       </label>
@@ -1143,77 +1196,80 @@ export function QuanLyThuChi() {
                         <p className="text-[12px] italic text-gray-500">Số tiền gốc: {formData.amount || 0}</p>
                       </div>
                     </div>
-                    <div>
-                      <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
-                        <span className="text-red-500 font-bold">*</span> Phân Bổ Chi Phí
-                      </label>
-                      <div className="relative">
-                        <select
-                          required
-                          disabled={modalMode === 'view'}
-                          value={formData.costAllocation || 'DIRECT'}
-                          onChange={e => setFormData({ ...formData, costAllocation: e.target.value as any })}
-                          className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none bg-white"
-                          style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
-                        >
-                          <option value="DIRECT">Trực tiếp</option>
-                          <option value="INDIRECT">Gián tiếp</option>
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                      </div>
-                    </div>
-                    {formData.costAllocation === 'INDIRECT' && (
-                      <div className="col-span-2 space-y-4">
+                    {modalType !== 'INCOME' && modalType !== 'LOAN' && (
+                      <>
                         <div>
                           <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
-                            <span className="text-red-500 font-bold">*</span> Quy tắc phân bổ
+                            <span className="text-red-500 font-bold">*</span> Phân Bổ Chi Phí
                           </label>
                           <div className="relative">
                             <select
                               required
                               disabled={modalMode === 'view'}
-                              value={formData.allocationRuleId || ''}
-                              onChange={e => setFormData({ ...formData, allocationRuleId: e.target.value })}
-                              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none bg-white font-medium"
+                              value={formData.costAllocation || 'DIRECT'}
+                              onChange={e => setFormData({ ...formData, costAllocation: e.target.value as any })}
+                              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none bg-white"
                               style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
                             >
-                              <option value="">Chọn quy tắc...</option>
-                              {allocationRules.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                              <option value="DIRECT">Trực tiếp</option>
+                              <option value="INDIRECT">Gián tiếp</option>
                             </select>
                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                           </div>
                         </div>
+                        {formData.costAllocation === 'INDIRECT' && (
+                          <div className="col-span-2 space-y-4">
+                            <div>
+                              <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
+                                <span className="text-red-500 font-bold">*</span> Quy tắc phân bổ
+                              </label>
+                              <div className="relative">
+                                <select
+                                  required
+                                  disabled={modalMode === 'view'}
+                                  value={formData.allocationRuleId || ''}
+                                  onChange={e => setFormData({ ...formData, allocationRuleId: e.target.value })}
+                                  className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none bg-white font-medium"
+                                  style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
+                                >
+                                  <option value="">Chọn quy tắc...</option>
+                                  {allocationRules.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                              </div>
+                            </div>
 
-                        {formData.allocationRuleId && formData.amount && (
-                          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                            <p className="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-3">Xem trước phân bổ</p>
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="text-gray-400 text-[11px] uppercase text-left">
-                                  <th className="pb-2 font-semibold">Business Unit</th>
-                                  <th className="pb-2 font-semibold text-right">Tỷ lệ (%)</th>
-                                  <th className="pb-2 font-semibold text-right">Số tiền dự kiến</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-gray-200">
-                                {allocationRules.find(r => r.id === formData.allocationRuleId)?.allocations?.map((alloc: any, idx: number) => (
-                                  <tr key={idx} className="text-gray-600">
-                                    <td className="py-2.5 font-medium">{businessUnits.find(bu => bu.id === alloc.buId)?.name || 'N/A'}</td>
-                                    <td className="py-2.5 text-right font-semibold text-blue-600">{alloc.percentage}%</td>
-                                    <td className="py-2.5 text-right font-bold text-gray-900">
-                                      {formatCurrency((formData.amount! * alloc.percentage) / 100)}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                            {formData.allocationRuleId && formData.amount && (
+                              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                <p className="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-3">Xem trước phân bổ</p>
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="text-gray-400 text-[11px] uppercase text-left">
+                                      <th className="pb-2 font-semibold">Business Unit</th>
+                                      <th className="pb-2 font-semibold text-right">Tỷ lệ (%)</th>
+                                      <th className="pb-2 font-semibold text-right">Số tiền dự kiến</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-200">
+                                    {allocationRules.find(r => r.id === formData.allocationRuleId)?.allocations?.map((alloc: any, idx: number) => (
+                                      <tr key={idx} className="text-gray-600">
+                                        <td className="py-2.5 font-medium">{businessUnits.find(bu => bu.id === alloc.buId)?.name || 'N/A'}</td>
+                                        <td className="py-2.5 text-right font-semibold text-blue-600">{alloc.percentage}%</td>
+                                        <td className="py-2.5 text-right font-bold text-gray-900">
+                                          {formatCurrency((formData.amount! * alloc.percentage) / 100)}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
                           </div>
                         )}
-                      </div>
+                      </>
                     )}
                   </div>
                 </div>
-
                 {/* SECTION 4: HỢP ĐỒNG ĐÍNH KÈM */}
                 <div>
                   <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">

@@ -3,6 +3,7 @@ import { Search, Plus, Eye, Edit2, Ban, Users, X, ChevronLeft, ChevronRight, Arr
 import { useDraggableColumns, DraggableColumnHeader, ColumnConfig } from '../hooks/useDraggableColumns';
 import { partnerService } from '../../services/partnerService';
 import { paymentMethodService } from '../../services/paymentMethodService';
+import { useApp } from '../../contexts/AppContext';
 
 interface BankAccount {
   id?: string;
@@ -44,6 +45,8 @@ interface Partner {
   bankAccounts: BankAccount[];
   paymentMethodId: string | null;
   paymentMethod?: PaymentMethod;
+  businessUnitId?: string;
+  businessUnit?: { name: string };
   paymentTerm: number;
   contracts: Contract[];
   balance: number;
@@ -58,6 +61,7 @@ export function QuanLyDoiTac() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { currentUser, availableBUs } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -86,6 +90,7 @@ export function QuanLyDoiTac() {
     representativePhone: '',
     bankAccounts: [],
     paymentMethodId: '',
+    businessUnitId: '',
     paymentTerm: 30,
     contracts: [],
     balance: 0,
@@ -103,6 +108,7 @@ export function QuanLyDoiTac() {
   const columnsConfig: ColumnConfig[] = [
     { id: 'partnerId', label: 'Mã Đối Tác', field: 'partnerId', visible: true, align: 'left' },
     { id: 'partnerName', label: 'Tên Đối Tác', field: 'partnerName', visible: true, align: 'left' },
+    { id: 'businessUnit', label: 'BU', field: 'businessUnit', visible: true, align: 'left' },
     { id: 'partnerType', label: 'Loại', field: 'partnerType', visible: true, align: 'center' },
     { id: 'taxCode', label: 'Mã Số Thuế', field: 'taxCode', visible: true, align: 'left' },
     { id: 'phone', label: 'Số ĐT', field: 'phone', visible: true, align: 'left' },
@@ -223,6 +229,7 @@ export function QuanLyDoiTac() {
       representativePhone: '',
       bankAccounts: [],
       paymentMethodId: paymentMethods.length > 0 ? paymentMethods[0].id : '',
+      businessUnitId: currentUser.role === 'Trưởng BU' ? currentUser.buId || '' : '',
       paymentTerm: 30,
       contracts: [],
       balance: 0,
@@ -281,18 +288,15 @@ export function QuanLyDoiTac() {
     }
 
     try {
+      const { businessUnit, paymentMethod, ...restOfFormData } = formData;
       const payload = {
-        ...formData,
+        ...restOfFormData,
         // Clean up unwanted fields if necessary, or just send partial
-        // Backend expects 'bankAccounts' and 'contracts' to be arrays of CreateInput
-        // For Update, we modified backend to deleteMany and create. So sending arrays without IDs is consistent.
         bankAccounts: formData.bankAccounts?.map(({ id, ...rest }) => rest),
         contracts: formData.contracts?.map(({ id, ...rest }) => rest),
-        paymentMethod: undefined,
         paymentMethodId: formData.paymentMethodId || undefined,
+        businessUnitId: formData.businessUnitId || undefined,
       };
-      // Backend expects 'bankAccounts' and 'contracts' to be arrays of CreateInput
-      // For Update, we modified backend to deleteMany and create. So sending arrays without IDs is consistent.
 
       if (modalMode === 'create') {
         await partnerService.create(payload);
@@ -496,6 +500,7 @@ export function QuanLyDoiTac() {
                         {columns.filter(c => c.visible).map(column => {
                           if (column.id === 'partnerId') return <td key={column.id} className="px-6 py-4 font-bold text-gray-900">{partner.partnerId}</td>;
                           if (column.id === 'partnerName') return <td key={column.id} className="px-6 py-4 font-medium text-gray-900">{partner.partnerName}</td>;
+                          if (column.id === 'businessUnit') return <td key={column.id} className="px-6 py-4 text-sm text-gray-600">{partner.businessUnit?.name || '-'}</td>;
                           if (column.id === 'partnerType') return <td key={column.id} className="px-6 py-4"><span className={`px-3 py-1 rounded-full text-xs font-semibold ${getPartnerTypeBadgeColor(partner.partnerType)}`}>{getPartnerTypeLabel(partner.partnerType)}</span></td>;
                           if (column.id === 'taxCode') return <td key={column.id} className="px-6 py-4 text-sm text-gray-600">{partner.taxCode}</td>;
                           if (column.id === 'phone') return <td key={column.id} className="px-6 py-4 text-sm text-gray-600">{partner.phone}</td>;
@@ -731,6 +736,24 @@ export function QuanLyDoiTac() {
                             className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
                             required
                           />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                            <Building2 className="w-4 h-4 text-gray-500" />
+                            <span className="text-red-500">*</span> BU Phụ Trách
+                          </label>
+                          <select
+                            value={formData.businessUnitId || ''}
+                            onChange={(e) => setFormData({ ...formData, businessUnitId: e.target.value })}
+                            disabled={isReadOnly || currentUser.role === 'Trưởng BU'}
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
+                            required
+                          >
+                            <option value="">Chọn Business Unit</option>
+                            {availableBUs.filter(bu => bu.id !== 'all').map(bu => (
+                              <option key={bu.id} value={bu.id}>{bu.name}</option>
+                            ))}
+                          </select>
                         </div>
                         <div className="col-span-2">
                           <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
@@ -995,32 +1018,35 @@ export function QuanLyDoiTac() {
               )}
             </div>
           </div>
-        </div>
-      )}
+        </div >
+      )
+      }
 
       {/* Deactivate Confirm Modal */}
-      {showDeactivateConfirm && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
-            <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận ngừng hợp tác</h3>
-            <p className="text-gray-600 mb-6">Bạn có chắc chắn muốn ngừng hợp tác với đối tác <b>{deactivatingPartner?.partnerName}</b>?</p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowDeactivateConfirm(false)}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={confirmDeactivate}
-                className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg"
-              >
-                Xác nhận
-              </button>
+      {
+        showDeactivateConfirm && (
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
+              <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận ngừng hợp tác</h3>
+              <p className="text-gray-600 mb-6">Bạn có chắc chắn muốn ngừng hợp tác với đối tác <b>{deactivatingPartner?.partnerName}</b>?</p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowDeactivateConfirm(false)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={confirmDeactivate}
+                  className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg"
+                >
+                  Xác nhận
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }

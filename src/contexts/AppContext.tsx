@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { businessUnitService } from '../services/businessUnitService';
+import { Permission } from '../services/roleService';
 
 // User roles
 export type UserRole = 'CEO' | 'Admin' | 'Trưởng BU' | 'Nhân viên';
@@ -14,6 +15,7 @@ export interface User {
   avatar: string | null;
   buId: string | null; // null for CEO/Admin, specific BU ID for others
   buName: string | null;
+  permissions?: Permission[];
 }
 
 // BU interface
@@ -47,6 +49,15 @@ export const mockUsers = {
     avatar: null,
     buId: null,
     buName: null,
+    permissions: [
+      { module: 'thu_chi', view: true, create: true, edit: true, delete: true, approve: true },
+      { module: 'bao_cao', view: true, create: true, edit: true, delete: true, approve: true },
+      { module: 'doi_tac', view: true, create: true, edit: true, delete: true, approve: true },
+      { module: 'nhan_su', view: true, create: true, edit: true, delete: true, approve: true },
+      { module: 'master_data', view: true, create: true, edit: true, delete: true, approve: true },
+      { module: 'he_thong', view: true, create: true, edit: true, delete: true, approve: true },
+      { module: 'quan_ly_bu', view: true, create: true, edit: true, delete: true, approve: true },
+    ]
   },
   admin: {
     id: 'user_002',
@@ -65,6 +76,15 @@ export const mockUsers = {
     avatar: null,
     buId: 'BlueBolt Software',
     buName: 'BlueBolt Software',
+    permissions: [
+      { module: 'thu_chi', view: true, create: true, edit: true, delete: false, approve: true },
+      { module: 'bao_cao', view: true, create: false, edit: false, delete: false, approve: false },
+      { module: 'doi_tac', view: true, create: true, edit: true, delete: true, approve: true },
+      { module: 'nhan_su', view: true, create: true, edit: true, delete: false, approve: false },
+      { module: 'master_data', view: false, create: false, edit: false, delete: false, approve: false },
+      { module: 'he_thong', view: false, create: false, edit: false, delete: false, approve: false },
+      { module: 'quan_ly_bu', view: true, create: true, edit: true, delete: true, approve: true },
+    ]
   },
   buManager2: {
     id: 'user_004',

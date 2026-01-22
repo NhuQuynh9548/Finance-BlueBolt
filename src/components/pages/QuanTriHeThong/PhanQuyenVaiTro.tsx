@@ -9,6 +9,7 @@ const DEFAULT_MODULES = [
   { key: 'bao_cao', label: 'Báo cáo' },
   { key: 'doi_tac', label: 'Đối tác' },
   { key: 'nhan_su', label: 'Nhân sự' },
+  { key: 'quan_ly_bu', label: 'Quản lý BU' },
   { key: 'master_data', label: 'Master Data' },
   { key: 'he_thong', label: 'Hệ thống' },
 ];

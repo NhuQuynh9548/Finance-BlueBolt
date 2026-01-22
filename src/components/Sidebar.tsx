@@ -149,15 +149,35 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     }
   ];
 
-  // Filter menu items based on user role
+  // Filter menu items based on user permissions
   const filteredMenuItems = React.useMemo(() => {
-    // If user is Trưởng BU, hide Admin menu
-    if (currentUser.role === 'Trưởng BU') {
-      return menuItems.filter(item => item.id !== 'admin');
+    // If no permissions defined (legacy or error), fallback to showing based on role
+    if (!currentUser.permissions || currentUser.permissions.length === 0) {
+      if (currentUser.role === 'Trưởng BU') {
+        return menuItems.filter(item => item.id !== 'admin' && item.id !== 'master');
+      }
+      return menuItems;
     }
-    // CEO and Admin see all menus
-    return menuItems;
-  }, [currentUser.role]);
+
+    // Mapping sidebar IDs to permission module keys
+    const idToModuleMap: Record<string, string> = {
+      'dashboard': 'bao_cao',
+      'bu': 'quan_ly_bu',
+      'thu-chi': 'thu_chi',
+      'nhan-su': 'nhan_su',
+      'doi-tac': 'doi_tac',
+      'admin': 'he_thong',
+      'master': 'master_data'
+    };
+
+    return menuItems.filter(item => {
+      const moduleKey = idToModuleMap[item.id];
+      if (!moduleKey) return true; // Show if no mapping exists
+
+      const permission = currentUser.permissions?.find(p => p.module === moduleKey);
+      return permission?.view !== false; // Show if view is true or person has no entry (default show)
+    });
+  }, [currentUser.role, currentUser.permissions]);
 
   const toggleMenu = (menuId: string) => {
     setExpandedMenus(prev =>
@@ -186,8 +206,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <div key={item.id}>
           <button
             onClick={() => toggleMenu(item.id)}
-            className={`w-full flex items-center justify-between px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-[#1E6BB8] transition-colors ${parentActive ? 'bg-[#1E6BB8] text-white' : ''
+            className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${parentActive ? 'text-white' : 'text-gray-700 hover:bg-blue-50 hover:text-[#004aad]'
               } ${collapsed ? 'justify-center' : ''}`}
+            style={parentActive ? { backgroundColor: '#004aad' } : {}}
           >
             <div className="flex items-center gap-3">
               {item.icon}
@@ -213,9 +234,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       <Component
         key={item.id}
         {...props}
-        className={`flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-[#1E6BB8] transition-colors ${depth > 0 ? 'pl-12' : ''
-          } ${active ? 'bg-[#1E6BB8] text-white' : ''} ${collapsed ? 'justify-center' : ''
+        className={`flex items-center gap-3 px-4 py-3 transition-colors ${depth > 0 ? 'pl-12' : ''
+          } ${active ? 'text-white' : 'text-gray-700 hover:bg-blue-50 hover:text-[#004aad]'} ${collapsed ? 'justify-center' : ''
           }`}
+        style={active ? { backgroundColor: '#004aad' } : {}}
       >
         {item.icon}
         {!collapsed && <span className="font-medium">{item.label}</span>}
@@ -238,12 +260,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <div className="flex items-center gap-2">
               <button
                 onClick={onToggle}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-[#1E6BB8]"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-[#004aad]"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
               <button
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-[#1E6BB8]"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-[#004aad]"
               >
                 <Menu className="w-5 h-5" />
               </button>
@@ -252,7 +274,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         ) : (
           <button
             onClick={onToggle}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-[#1E6BB8]"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-[#004aad]"
           >
             <Menu className="w-5 h-5" />
           </button>
