@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import logoImage from 'figma:asset/aadf402f3cd19f8e27a3dc2fcf75fe8a4c96091f.png';
+import logoImage from 'figma:asset/logo-bluebolt.png';
 import {
   LayoutDashboard,
   Building2,
@@ -255,7 +255,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {!collapsed ? (
           <>
             <div className="flex items-center gap-3">
-              <img src={logoImage} alt="BLUEBOLT" className="h-8 w-auto" />
+              <img src={logoImage} alt="BLUEBOLT" className="h-18 w-auto" />
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -263,11 +263,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-[#004aad]"
               >
                 <ChevronRight className="w-5 h-5" />
-              </button>
-              <button
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-[#004aad]"
-              >
-                <Menu className="w-5 h-5" />
               </button>
             </div>
           </>
