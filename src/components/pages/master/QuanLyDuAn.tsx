@@ -192,7 +192,7 @@ export function QuanLyDuAn() {
                 placeholder="Tìm kiếm mã, tên dự án, PM..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent"
               />
             </div>
 
@@ -200,7 +200,7 @@ export function QuanLyDuAn() {
             <select
               value={filterBU}
               onChange={(e) => setFilterBU(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent"
             >
               <option value="all">Tất cả BU</option>
               {businessUnits.map(bu => (
@@ -212,7 +212,7 @@ export function QuanLyDuAn() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="ongoing">Đang thực hiện</option>
@@ -229,7 +229,7 @@ export function QuanLyDuAn() {
           {/* Add Button */}
           <button
             onClick={handleAdd}
-            className="flex items-center gap-2 px-6 py-2 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors whitespace-nowrap"
+            className="flex items-center gap-2 px-6 py-2 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors whitespace-nowrap"
           >
             <Plus className="w-5 h-5" />
             Thêm Dự Án
@@ -260,7 +260,7 @@ export function QuanLyDuAn() {
                 {filteredProjects.map((project) => (
                   <tr key={project.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="font-mono font-semibold text-[#1E6BB8]">{project.code}</span>
+                      <span className="font-mono font-semibold text-[#004aad]">{project.code}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
@@ -355,7 +355,7 @@ export function QuanLyDuAn() {
                         value={formData.code}
                         onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                         placeholder="PRJ-..."
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                         required
                       />
                     </div>
@@ -366,7 +366,7 @@ export function QuanLyDuAn() {
                       <select
                         value={formData.status}
                         onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                         required
                       >
                         <option value="ongoing">Đang thực hiện</option>
@@ -386,7 +386,7 @@ export function QuanLyDuAn() {
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="Tên dự án..."
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                       required
                     />
                   </div>
@@ -399,7 +399,7 @@ export function QuanLyDuAn() {
                       <select
                         value={formData.buOwner}
                         onChange={(e) => setFormData({ ...formData, buOwner: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                         required
                       >
                         <option value="">Chọn BU...</option>
@@ -417,7 +417,7 @@ export function QuanLyDuAn() {
                         value={formData.pm}
                         onChange={(e) => setFormData({ ...formData, pm: e.target.value })}
                         placeholder="Tên PM..."
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                       />
                     </div>
                   </div>
@@ -432,7 +432,7 @@ export function QuanLyDuAn() {
                       onChange={(e) => setFormData({ ...formData, budget: parseInt(e.target.value) || 0 })}
                       placeholder="0"
                       min="0"
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                     />
                   </div>
 
@@ -445,7 +445,7 @@ export function QuanLyDuAn() {
                         type="date"
                         value={formData.startDate}
                         onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                         required
                       />
                     </div>
@@ -457,7 +457,7 @@ export function QuanLyDuAn() {
                         type="date"
                         value={formData.endDate}
                         onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                       />
                     </div>
                   </div>
@@ -476,7 +476,7 @@ export function QuanLyDuAn() {
               <button
                 type="submit"
                 form="project-form"
-                className="px-8 py-2.5 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
+                className="px-8 py-2.5 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
               >
                 {editingProject ? 'Cập Nhật' : 'Tạo Mới'}
               </button>

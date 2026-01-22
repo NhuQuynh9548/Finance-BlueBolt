@@ -271,7 +271,7 @@ export function Dashboard() {
             <select
               value={filterTimeRange}
               onChange={(e) => setFilterTimeRange(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#004aad] focus:border-transparent"
             >
               <option value="month">Tháng này</option>
               <option value="quarter">Quý này</option>
@@ -288,20 +288,20 @@ export function Dashboard() {
                 type="date"
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
-                className="px-3 py-1.5 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent bg-white text-sm"
+                className="px-3 py-1.5 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#004aad] focus:border-transparent bg-white text-sm"
               />
               <span className="text-sm font-medium text-blue-700">Đến:</span>
               <input
                 type="date"
                 value={customEndDate}
                 onChange={(e) => setCustomEndDate(e.target.value)}
-                className="px-3 py-1.5 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent bg-white text-sm"
+                className="px-3 py-1.5 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#004aad] focus:border-transparent bg-white text-sm"
               />
             </div>
           )}
 
           {/* Display current filter */}
-          <div className="ml-auto flex items-center gap-2 bg-[#1E6BB8] text-white px-4 py-2 rounded-lg">
+          <div className="ml-auto flex items-center gap-2 bg-[#004aad] text-white px-4 py-2 rounded-lg">
             <span className="text-sm font-medium">📅 {getTimeRangeText()}</span>
           </div>
         </div>
@@ -545,7 +545,7 @@ export function Dashboard() {
                 <tr key={bu.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="w-10 h-10 bg-gradient-to-br from-[#1E6BB8] to-[#155a9e] rounded-lg flex items-center justify-center text-white font-bold text-sm mr-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-[#004aad] to-[#155a9e] rounded-lg flex items-center justify-center text-white font-bold text-sm mr-3">
                         {bu.buName.split(' ')[1]?.substring(0, 2).toUpperCase() || 'BU'}
                       </div>
                       <div>
@@ -582,7 +582,7 @@ export function Dashboard() {
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <button
                       onClick={() => handleViewBUDetail(bu)}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-[#1E6BB8] hover:bg-[#155a9e] text-white rounded-lg transition-colors text-sm font-medium"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-[#004aad] hover:bg-[#155a9e] text-white rounded-lg transition-colors text-sm font-medium"
                     >
                       <Eye className="w-4 h-4" />
                       Xem chi tiết

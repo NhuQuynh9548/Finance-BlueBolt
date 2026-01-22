@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Bell, ChevronDown, User, Lock, LogOut, Building2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -48,12 +48,12 @@ export function Header({ sidebarCollapsed }: HeaderProps) {
               onClick={() => canSelectBU && setShowBUDropdown(!showBUDropdown)}
               disabled={!canSelectBU}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 bg-white transition-all ${canSelectBU
-                  ? 'hover:border-[#1E6BB8] hover:bg-blue-50 cursor-pointer'
-                  : 'opacity-60 cursor-not-allowed bg-gray-50'
+                ? 'hover:border-[#004aad] hover:bg-blue-50 cursor-pointer'
+                : 'opacity-60 cursor-not-allowed bg-gray-50'
                 }`}
               title={!canSelectBU ? `Bạn chỉ có quyền xem ${currentBU?.name}` : ''}
             >
-              <Building2 className="w-4 h-4 text-[#1E6BB8]" />
+              <Building2 className="w-4 h-4 text-[#004aad]" />
               <span className="font-medium text-gray-700 whitespace-nowrap">
                 {currentBU?.name || 'Chọn BU'}
               </span>
@@ -82,7 +82,7 @@ export function Header({ sidebarCollapsed }: HeaderProps) {
                         setSelectedBU(bu.id);
                         setShowBUDropdown(false);
                       }}
-                      className={`w-full px-4 py-2 text-left hover:bg-blue-50 transition-colors ${selectedBU === bu.id ? 'bg-blue-50 text-[#1E6BB8] font-medium' : 'text-gray-700'
+                      className={`w-full px-4 py-2 text-left hover:bg-blue-50 transition-colors ${selectedBU === bu.id ? 'bg-blue-50 text-[#004aad] font-medium' : 'text-gray-700'
                         }`}
                     >
                       {bu.name}
@@ -102,7 +102,7 @@ export function Header({ sidebarCollapsed }: HeaderProps) {
                 placeholder="Tìm kiếm phiếu thu/chi, đối tác, nhân sự..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#004aad] focus:border-transparent"
               />
             </div>
           </div>
@@ -150,7 +150,7 @@ export function Header({ sidebarCollapsed }: HeaderProps) {
                     ))}
                   </div>
                   <div className="px-4 py-3 border-t border-gray-200 text-center">
-                    <button className="text-sm text-[#1E6BB8] hover:underline font-medium">
+                    <button className="text-sm text-[#004aad] hover:underline font-medium">
                       Xem tất cả thông báo
                     </button>
                   </div>
@@ -166,7 +166,7 @@ export function Header({ sidebarCollapsed }: HeaderProps) {
               className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
               {/* Avatar */}
-              <div className="w-9 h-9 bg-[#1E6BB8] rounded-full flex items-center justify-center text-white font-semibold">
+              <div className="w-9 h-9 bg-[#004aad] rounded-full flex items-center justify-center text-white font-semibold">
                 {currentUser.name.split(' ').slice(-1)[0].charAt(0)}
               </div>
               {/* User Info */}
@@ -189,17 +189,25 @@ export function Header({ sidebarCollapsed }: HeaderProps) {
                     <p className="font-semibold text-gray-800">{currentUser.name}</p>
                     <p className="text-sm text-gray-500">{currentUser.role}</p>
                     {currentUser.buName && (
-                      <p className="text-xs text-[#1E6BB8] mt-1">{currentUser.buName}</p>
+                      <p className="text-xs text-[#004aad] mt-1">{currentUser.buName}</p>
                     )}
                   </div>
-                  <button className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 text-gray-700">
+                  <Link
+                    to="/profile"
+                    className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 text-gray-700"
+                    onClick={() => setShowUserMenu(false)}
+                  >
                     <User className="w-4 h-4" />
                     <span>Thông tin cá nhân</span>
-                  </button>
-                  <button className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 text-gray-700">
+                  </Link>
+                  <Link
+                    to="/change-password"
+                    className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 text-gray-700"
+                    onClick={() => setShowUserMenu(false)}
+                  >
                     <Lock className="w-4 h-4" />
                     <span>Đổi mật khẩu</span>
-                  </button>
+                  </Link>
                   <div className="border-t border-gray-200 mt-2 pt-2">
                     <button className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 text-red-600" onClick={handleLogout}>
                       <LogOut className="w-4 h-4" />

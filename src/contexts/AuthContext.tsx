@@ -7,6 +7,7 @@ interface AuthContextType {
   currentUser: User | null;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  updateUser: (user: User) => void;
   loading: boolean;
 }
 
@@ -52,6 +53,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const updateUser = (user: User) => {
+    setCurrentUser(user);
+    localStorage.setItem('currentUser', JSON.stringify(user));
+  };
+
   // Check token and verify user on mount
   React.useEffect(() => {
     const verifyAuth = async () => {
@@ -64,6 +70,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const user = await authService.getCurrentUser();
           setIsAuthenticated(true);
           setCurrentUser(user as User);
+          localStorage.setItem('currentUser', JSON.stringify(user));
         } catch (error) {
           // Token invalid or expired
           console.error('Token verification failed:', error);
@@ -83,6 +90,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     currentUser,
     login,
     logout,
+    updateUser,
     loading
   };
 

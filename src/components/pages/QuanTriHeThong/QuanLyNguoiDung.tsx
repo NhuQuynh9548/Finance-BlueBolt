@@ -132,8 +132,8 @@ export function QuanLyNguoiDung() {
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
-    if (sortOrder === 'asc') return <ArrowUp className="w-4 h-4 text-[#1E6BB8]" />;
-    return <ArrowDown className="w-4 h-4 text-[#1E6BB8]" />;
+    if (sortOrder === 'asc') return <ArrowUp className="w-4 h-4 text-[#004aad]" />;
+    return <ArrowDown className="w-4 h-4 text-[#004aad]" />;
   };
 
   const handleClearFilter = () => {
@@ -326,7 +326,7 @@ export function QuanLyNguoiDung() {
         </div>
         <button
           onClick={handleCreate}
-          className="flex items-center gap-2 px-6 py-3 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors shadow-md"
+          className="flex items-center gap-2 px-6 py-3 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors shadow-md"
         >
           <Plus className="w-5 h-5" />
           Thêm người dùng
@@ -343,7 +343,7 @@ export function QuanLyNguoiDung() {
               placeholder="Tìm kiếm theo User ID, Họ tên, Email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent"
             />
           </div>
 
@@ -351,7 +351,7 @@ export function QuanLyNguoiDung() {
             <select
               value={filterRole}
               onChange={(e) => setFilterRole(e.target.value)}
-              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent bg-white"
+              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent bg-white"
             >
               <option value="all">Tất cả Role</option>
               {roles.map(role => (
@@ -362,7 +362,7 @@ export function QuanLyNguoiDung() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent bg-white"
+              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent bg-white"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="active">Active</option>
@@ -373,7 +373,7 @@ export function QuanLyNguoiDung() {
               <select
                 value={filterBU}
                 onChange={(e) => setFilterBU(e.target.value)}
-                className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent bg-white"
+                className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent bg-white"
               >
                 <option value="all">Tất cả BU</option>
                 {businessUnits.map(bu => (
@@ -401,7 +401,7 @@ export function QuanLyNguoiDung() {
                 <th className="px-4 py-3 text-left">
                   <button
                     onClick={() => handleSort('userId')}
-                    className="flex items-center gap-2 text-xs font-semibold text-gray-600 uppercase tracking-wider hover:text-[#1E6BB8] transition-colors"
+                    className="flex items-center gap-2 text-xs font-semibold text-gray-600 uppercase tracking-wider hover:text-[#004aad] transition-colors"
                   >
                     User ID
                     {getSortIcon('userId')}
@@ -410,7 +410,7 @@ export function QuanLyNguoiDung() {
                 <th className="px-4 py-3 text-left">
                   <button
                     onClick={() => handleSort('fullName')}
-                    className="flex items-center gap-2 text-xs font-semibold text-gray-600 uppercase tracking-wider hover:text-[#1E6BB8] transition-colors"
+                    className="flex items-center gap-2 text-xs font-semibold text-gray-600 uppercase tracking-wider hover:text-[#004aad] transition-colors"
                   >
                     Họ Tên
                     {getSortIcon('fullName')}
@@ -424,7 +424,7 @@ export function QuanLyNguoiDung() {
                 <th className="px-4 py-3 text-left">
                   <button
                     onClick={() => handleSort('lastLogin')}
-                    className="flex items-center gap-2 text-xs font-semibold text-gray-600 uppercase tracking-wider hover:text-[#1E6BB8] transition-colors"
+                    className="flex items-center gap-2 text-xs font-semibold text-gray-600 uppercase tracking-wider hover:text-[#004aad] transition-colors"
                   >
                     Last Login
                     {getSortIcon('lastLogin')}
@@ -455,7 +455,7 @@ export function QuanLyNguoiDung() {
                     <span className="text-sm text-gray-600">{user.email}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-sm font-semibold text-[#1E6BB8]">{user.role}</span>
+                    <span className="text-sm font-semibold text-[#004aad]">{user.role}</span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
@@ -547,7 +547,7 @@ export function QuanLyNguoiDung() {
                   key={page}
                   onClick={() => setCurrentPage(page)}
                   className={`px-4 py-2 rounded-lg transition-colors ${currentPage === page
-                    ? 'bg-[#1E6BB8] text-white'
+                    ? 'bg-[#004aad] text-white'
                     : 'border border-gray-300 hover:bg-gray-50'
                     }`}
                 >
@@ -622,7 +622,7 @@ export function QuanLyNguoiDung() {
                           onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                           placeholder="Nguyễn Văn A"
                           disabled={isReadOnly}
-                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                           required
                         />
                       </div>
@@ -637,7 +637,7 @@ export function QuanLyNguoiDung() {
                           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                           placeholder="user@bluebolt.vn"
                           disabled={isReadOnly}
-                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                           required
                         />
                       </div>
@@ -659,7 +659,7 @@ export function QuanLyNguoiDung() {
                           value={formData.roleId}
                           onChange={(e) => handleRoleChange(e.target.value)}
                           disabled={isReadOnly}
-                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                           required
                         >
                           <option value="">Chọn role...</option>
@@ -697,7 +697,7 @@ export function QuanLyNguoiDung() {
                                 checked={formData.businessUnits?.includes(bu.name) || false}
                                 onChange={() => setFormData({ ...formData, businessUnits: [bu.name] })}
                                 disabled={isReadOnly}
-                                className="w-4 h-4 text-[#1E6BB8] focus:ring-[#1E6BB8]"
+                                className="w-4 h-4 text-[#004aad] focus:ring-[#004aad]"
                               />
                               <span className="text-sm text-gray-700">{bu.name}</span>
                             </label>
@@ -719,7 +719,7 @@ export function QuanLyNguoiDung() {
                           checked={formData.twoFAEnabled}
                           onChange={(e) => setFormData({ ...formData, twoFAEnabled: e.target.checked })}
                           disabled={isReadOnly}
-                          className="w-4 h-4 text-[#1E6BB8] rounded focus:ring-[#1E6BB8]"
+                          className="w-4 h-4 text-[#004aad] rounded focus:ring-[#004aad]"
                         />
                         <span className="text-sm font-medium text-gray-700">Bật xác thực 2 lớp (2FA)</span>
                       </label>
@@ -773,7 +773,7 @@ export function QuanLyNguoiDung() {
                 <button
                   type="submit"
                   form="user-form"
-                  className="flex items-center gap-2 px-8 py-2.5 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
+                  className="flex items-center gap-2 px-8 py-2.5 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
                 >
                   <Save className="w-4 h-4" />
                   {modalMode === 'create' ? 'Tạo mới' : 'Lưu thay đổi'}

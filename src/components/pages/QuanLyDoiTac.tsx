@@ -199,8 +199,8 @@ export function QuanLyDoiTac() {
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
-    if (sortOrder === 'asc') return <ArrowUp className="w-4 h-4 text-[#1E6BB8]" />;
-    return <ArrowDown className="w-4 h-4 text-[#1E6BB8]" />;
+    if (sortOrder === 'asc') return <ArrowUp className="w-4 h-4 text-[#004aad]" />;
+    return <ArrowDown className="w-4 h-4 text-[#004aad]" />;
   };
 
   const handleClearFilter = () => {
@@ -413,7 +413,7 @@ export function QuanLyDoiTac() {
         </div>
         <button
           onClick={handleCreate}
-          className="flex items-center gap-2 px-6 py-3 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors shadow-md"
+          className="flex items-center gap-2 px-6 py-3 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors shadow-md"
         >
           <Plus className="w-5 h-5" />
           Thêm Đối tác
@@ -423,7 +423,7 @@ export function QuanLyDoiTac() {
       {/* Loading State */}
       {loading && (
         <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1E6BB8]"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#004aad]"></div>
           <span className="ml-3 text-gray-600">Đang tải dữ liệu...</span>
         </div>
       )}
@@ -450,7 +450,7 @@ export function QuanLyDoiTac() {
                   placeholder="Tìm kiếm theo Mã đối tác, Tên, MST, hoặc SĐT..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent"
                 />
               </div>
 
@@ -458,7 +458,7 @@ export function QuanLyDoiTac() {
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
-                  className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent bg-white"
+                  className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent bg-white"
                 >
                   <option value="all">Tất cả loại đối tác</option>
                   <option value="CUSTOMER">Khách hàng</option>
@@ -570,7 +570,7 @@ export function QuanLyDoiTac() {
                       key={page}
                       onClick={() => setCurrentPage(page)}
                       className={`px-4 py-2 rounded-lg transition-colors ${currentPage === page
-                        ? 'bg-[#1E6BB8] text-white'
+                        ? 'bg-[#004aad] text-white'
                         : 'border border-gray-300 hover:bg-gray-50'
                         }`}
                     >
@@ -621,7 +621,7 @@ export function QuanLyDoiTac() {
                 <button
                   onClick={() => setActiveTab('info')}
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'info'
-                    ? 'bg-[#1E6BB8] text-white'
+                    ? 'bg-[#004aad] text-white'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                 >
@@ -630,7 +630,7 @@ export function QuanLyDoiTac() {
                 <button
                   onClick={() => setActiveTab('contracts')}
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'contracts'
-                    ? 'bg-[#1E6BB8] text-white'
+                    ? 'bg-[#004aad] text-white'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                 >
@@ -671,7 +671,7 @@ export function QuanLyDoiTac() {
                             onChange={(e) => setFormData({ ...formData, partnerName: e.target.value })}
                             placeholder="Công ty TNHH ABC"
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
                             required
                           />
                         </div>
@@ -683,7 +683,7 @@ export function QuanLyDoiTac() {
                             value={formData.partnerType}
                             onChange={(e) => setFormData({ ...formData, partnerType: e.target.value as any })}
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
                             required
                           >
                             <option value="CUSTOMER">Khách hàng</option>
@@ -703,7 +703,7 @@ export function QuanLyDoiTac() {
                             placeholder="0123456789"
                             maxLength={13}
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
                             required
                           />
                         </div>
@@ -718,7 +718,7 @@ export function QuanLyDoiTac() {
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                             placeholder="0281234567"
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
                             required
                           />
                         </div>
@@ -733,7 +733,7 @@ export function QuanLyDoiTac() {
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             placeholder="invoice@company.com"
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
                             required
                           />
                         </div>
@@ -746,7 +746,7 @@ export function QuanLyDoiTac() {
                             value={formData.businessUnitId || ''}
                             onChange={(e) => setFormData({ ...formData, businessUnitId: e.target.value })}
                             disabled={isReadOnly || currentUser.role === 'Trưởng BU'}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
                             required
                           >
                             <option value="">Chọn Business Unit</option>
@@ -766,7 +766,7 @@ export function QuanLyDoiTac() {
                             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                             placeholder="123 Đường ABC, Quận XYZ, TP.HCM"
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
                             required
                           />
                         </div>
@@ -789,7 +789,7 @@ export function QuanLyDoiTac() {
                             onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
                             placeholder="Nguyễn Văn A"
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
                           />
                         </div>
                         <div>
@@ -802,7 +802,7 @@ export function QuanLyDoiTac() {
                             onChange={(e) => setFormData({ ...formData, representativeName: e.target.value })}
                             placeholder="Trần Văn B"
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
                           />
                         </div>
                         <div>
@@ -815,7 +815,7 @@ export function QuanLyDoiTac() {
                             onChange={(e) => setFormData({ ...formData, representativeTitle: e.target.value })}
                             placeholder="Giám đốc"
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
                           />
                         </div>
                         <div>
@@ -828,7 +828,7 @@ export function QuanLyDoiTac() {
                             onChange={(e) => setFormData({ ...formData, representativePhone: e.target.value })}
                             placeholder="0909..."
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
                           />
                         </div>
                       </div>
@@ -848,7 +848,7 @@ export function QuanLyDoiTac() {
                             value={formData.paymentMethodId || ''}
                             onChange={(e) => setFormData({ ...formData, paymentMethodId: e.target.value })}
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
                           >
                             <option value="">Chọn phương thức</option>
                             {paymentMethods.map(pm => (
@@ -864,7 +864,7 @@ export function QuanLyDoiTac() {
                             type="number"
                             value={formData.paymentTerm}
                             onChange={(e) => setFormData({ ...formData, paymentTerm: parseInt(e.target.value) || 0 })}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
                             disabled={isReadOnly}
                           />
                         </div>
@@ -922,7 +922,7 @@ export function QuanLyDoiTac() {
                           </div>
                         ))}
                         {!isReadOnly && (
-                          <button type="button" onClick={addBankAccount} className="text-[#1E6BB8] text-sm font-semibold flex items-center gap-1 mt-2">
+                          <button type="button" onClick={addBankAccount} className="text-[#004aad] text-sm font-semibold flex items-center gap-1 mt-2">
                             <Plus className="w-4 h-4" /> Thêm tài khoản
                           </button>
                         )}
@@ -936,7 +936,7 @@ export function QuanLyDoiTac() {
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-sm font-bold text-gray-700 uppercase">Danh sách hợp đồng</h3>
                       {!isReadOnly && (
-                        <button type="button" onClick={addContract} className="px-4 py-2 bg-[#1E6BB8] text-white rounded-lg text-sm flex items-center gap-2">
+                        <button type="button" onClick={addContract} className="px-4 py-2 bg-[#004aad] text-white rounded-lg text-sm flex items-center gap-2">
                           <Plus className="w-4 h-4" /> Thêm hợp đồng
                         </button>
                       )}
@@ -1011,7 +1011,7 @@ export function QuanLyDoiTac() {
                 <button
                   type="submit"
                   form="partner-form"
-                  className="px-6 py-2 bg-[#1E6BB8] text-white rounded-lg hover:bg-[#1557A0] transition-colors shadow-sm"
+                  className="px-6 py-2 bg-[#004aad] text-white rounded-lg hover:bg-[#1557A0] transition-colors shadow-sm"
                 >
                   {modalMode === 'create' ? 'Tạo Đối Tác' : 'Lưu Thay Đổi'}
                 </button>

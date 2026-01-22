@@ -99,7 +99,7 @@ export function DatePicker({ value, onChange, disabled = false }: DatePickerProp
           disabled={disabled}
           onClick={() => !disabled && setShowCalendar(!showCalendar)}
           placeholder="DD/MM/YYYY"
-          className="w-full px-4 py-2.5 pr-10 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed cursor-pointer"
+          className="w-full px-4 py-2.5 pr-10 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed cursor-pointer"
         />
         <Calendar 
           className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" 
@@ -153,9 +153,9 @@ export function DatePicker({ value, onChange, disabled = false }: DatePickerProp
                       onClick={() => handleDateClick(day)}
                       className={`w-full h-full flex items-center justify-center rounded text-sm transition-colors ${
                         isSelected(day)
-                          ? 'bg-[#1E6BB8] text-white font-semibold'
+                          ? 'bg-[#004aad] text-white font-semibold'
                           : isToday(day)
-                          ? 'bg-blue-50 text-[#1E6BB8] font-semibold'
+                          ? 'bg-blue-50 text-[#004aad] font-semibold'
                           : 'hover:bg-gray-100 text-gray-700'
                       }`}
                     >
@@ -183,7 +183,7 @@ export function DatePicker({ value, onChange, disabled = false }: DatePickerProp
               <button
                 type="button"
                 onClick={() => setShowCalendar(false)}
-                className="flex-1 px-3 py-1.5 text-xs bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded transition-colors"
+                className="flex-1 px-3 py-1.5 text-xs bg-[#004aad] hover:bg-[#1557A0] text-white rounded transition-colors"
               >
                 Xong
               </button>

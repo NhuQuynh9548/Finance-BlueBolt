@@ -184,7 +184,7 @@ export function PhanBoChiPhi() {
         </div>
         <button
           onClick={handleAdd}
-          className="flex items-center gap-2 px-6 py-3 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors"
+          className="flex items-center gap-2 px-6 py-3 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors"
         >
           <Plus className="w-5 h-5" />
           Thêm quy tắc mới
@@ -200,7 +200,7 @@ export function PhanBoChiPhi() {
             placeholder="Tìm kiếm quy tắc..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-gray-50 border-0 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:bg-white transition-all text-gray-700"
+            className="w-full pl-12 pr-4 py-3 bg-gray-50 border-0 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:bg-white transition-all text-gray-700"
           />
         </div>
         <button onClick={fetchData} className="p-3 bg-gray-100 rounded-lg hover:bg-gray-200">
@@ -258,7 +258,7 @@ export function PhanBoChiPhi() {
                     {rule.allocations.map((allocation) => (
                       <div key={allocation.buId} className={`rounded-lg p-3 text-center border ${allocation.percentage > 0 ? 'bg-white border-blue-200 shadow-sm' : 'bg-transparent border-transparent opacity-50'}`}>
                         <p className="text-xs text-gray-500 mb-1 truncate" title={allocation.buName}>{allocation.buName}</p>
-                        <p className={`text-lg font-bold ${allocation.percentage > 0 ? 'text-[#1E6BB8]' : 'text-gray-400'}`}>
+                        <p className={`text-lg font-bold ${allocation.percentage > 0 ? 'text-[#004aad]' : 'text-gray-400'}`}>
                           {allocation.percentage}%
                         </p>
                       </div>

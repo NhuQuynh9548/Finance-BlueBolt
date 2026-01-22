@@ -992,7 +992,7 @@ export function QuanLyThuChi() {
                               employeeId: undefined
                             });
                           }}
-                          className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#1E6BB8] outline-none appearance-none bg-white transition-all disabled:bg-gray-50 disabled:text-gray-500"
+                          className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#004aad] outline-none appearance-none bg-white transition-all disabled:bg-gray-50 disabled:text-gray-500"
                           style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
                         >
                           {formData.costAllocation === 'INDIRECT' ? (
@@ -1353,7 +1353,7 @@ export function QuanLyThuChi() {
                     <button
                       type="button"
                       onClick={() => handleSubmit(null as any, 'PENDING')}
-                      className="px-8 py-2 bg-[#1E6BB8] text-white rounded-lg hover:bg-[#1557A0] font-semibold text-sm transition-colors min-w-[120px] flex items-center justify-center gap-2"
+                      className="px-8 py-2 bg-[#004aad] text-white rounded-lg hover:bg-[#1557A0] font-semibold text-sm transition-colors min-w-[120px] flex items-center justify-center gap-2"
                     >
                       <Send className="w-4 h-4" /> Gửi duyệt
                     </button>

@@ -306,7 +306,7 @@ export function QuanLyBU() {
       {/* Loading State */}
       {loading && (
         <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1E6BB8]"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#004aad]"></div>
           <span className="ml-3 text-gray-600">Đang tải dữ liệu...</span>
         </div>
       )}
@@ -360,7 +360,7 @@ export function QuanLyBU() {
                 {canAddBU && (
                   <button
                     onClick={handleCreate}
-                    className="bg-[#1E6BB8] hover:bg-[#1557A0] text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                    className="bg-[#004aad] hover:bg-[#1557A0] text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors"
                   >
                     <Plus className="w-5 h-5" />
                     Thêm BU Mới
@@ -472,7 +472,7 @@ export function QuanLyBU() {
                         onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                         disabled={viewMode}
                         placeholder="BU-AUTO"
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:text-gray-500 disabled:bg-gray-100"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:text-gray-500 disabled:bg-gray-100"
                       />
                     </div>
                     <div>
@@ -482,7 +482,7 @@ export function QuanLyBU() {
                       <select
                         value={formData.status}
                         onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'paused' })}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
                         disabled={viewMode}
                       >
                         <option value="active">Hoạt động</option>
@@ -501,7 +501,7 @@ export function QuanLyBU() {
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="Ví dụ: BlueBolt Software"
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:text-gray-500 disabled:bg-gray-100"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:text-gray-500 disabled:bg-gray-100"
                       required
                       disabled={viewMode}
                     />
@@ -517,7 +517,7 @@ export function QuanLyBU() {
                       value={formData.leader}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, leader: e.target.value })}
                       placeholder="Nhập tên người quản lý"
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:text-gray-500 disabled:bg-gray-100"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:text-gray-500 disabled:bg-gray-100"
                       disabled={viewMode}
                     />
                   </div>
@@ -532,7 +532,7 @@ export function QuanLyBU() {
                         type="date"
                         value={formData.startDate}
                         onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:text-gray-500 disabled:bg-gray-100"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:text-gray-500 disabled:bg-gray-100"
                         disabled={viewMode}
                       />
                     </div>
@@ -546,7 +546,7 @@ export function QuanLyBU() {
                         onChange={(e) => setFormData({ ...formData, staff: parseInt(e.target.value) || 0 })}
                         placeholder="0"
                         min="0"
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:text-gray-500 disabled:bg-gray-100"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:text-gray-500 disabled:bg-gray-100"
                         disabled={viewMode}
                       />
                     </div>
@@ -568,7 +568,7 @@ export function QuanLyBU() {
                 <button
                   type="submit"
                   form="bu-form"
-                  className="px-8 py-2.5 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
+                  className="px-8 py-2.5 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
                 >
                   {editingBU ? 'Xác nhận cập nhật' : 'Xác nhận tạo mới'}
                 </button>

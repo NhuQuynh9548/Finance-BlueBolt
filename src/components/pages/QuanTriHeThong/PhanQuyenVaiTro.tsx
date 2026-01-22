@@ -180,7 +180,7 @@ export function PhanQuyenVaiTro() {
         </div>
         <button
           onClick={handleCreate}
-          className="flex items-center gap-2 px-6 py-3 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors shadow-md"
+          className="flex items-center gap-2 px-6 py-3 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors shadow-md"
         >
           <Plus className="w-5 h-5" />
           Tạo nhóm vai trò
@@ -229,7 +229,7 @@ export function PhanQuyenVaiTro() {
                 <tr key={role.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <Shield className="w-5 h-5 text-[#1E6BB8]" />
+                      <Shield className="w-5 h-5 text-[#004aad]" />
                       <div>
                         <span className="font-bold text-gray-900">{role.name}</span>
                         {role.isSystemRole && (
@@ -339,7 +339,7 @@ export function PhanQuyenVaiTro() {
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                           placeholder="VD: Accountant, HR Manager..."
                           disabled={isReadOnly}
-                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                           required
                         />
                       </div>
@@ -353,7 +353,7 @@ export function PhanQuyenVaiTro() {
                           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                           placeholder="Mô tả vai trò..."
                           disabled={isReadOnly}
-                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                           required
                         />
                       </div>
@@ -406,7 +406,7 @@ export function PhanQuyenVaiTro() {
                                   checked={perm.view}
                                   onChange={(e) => handlePermissionChange(perm.module, 'view', e.target.checked)}
                                   disabled={isReadOnly}
-                                  className="w-5 h-5 text-[#1E6BB8] rounded focus:ring-[#1E6BB8] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="w-5 h-5 text-[#004aad] rounded focus:ring-[#004aad] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                                 />
                               </td>
                               <td className="px-4 py-3 text-center border-r border-gray-200">
@@ -415,7 +415,7 @@ export function PhanQuyenVaiTro() {
                                   checked={perm.create}
                                   onChange={(e) => handlePermissionChange(perm.module, 'create', e.target.checked)}
                                   disabled={isReadOnly}
-                                  className="w-5 h-5 text-[#1E6BB8] rounded focus:ring-[#1E6BB8] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="w-5 h-5 text-[#004aad] rounded focus:ring-[#004aad] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                                 />
                               </td>
                               <td className="px-4 py-3 text-center border-r border-gray-200">
@@ -424,7 +424,7 @@ export function PhanQuyenVaiTro() {
                                   checked={perm.edit}
                                   onChange={(e) => handlePermissionChange(perm.module, 'edit', e.target.checked)}
                                   disabled={isReadOnly}
-                                  className="w-5 h-5 text-[#1E6BB8] rounded focus:ring-[#1E6BB8] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="w-5 h-5 text-[#004aad] rounded focus:ring-[#004aad] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                                 />
                               </td>
                               <td className="px-4 py-3 text-center border-r border-gray-200">
@@ -433,7 +433,7 @@ export function PhanQuyenVaiTro() {
                                   checked={perm.delete}
                                   onChange={(e) => handlePermissionChange(perm.module, 'delete', e.target.checked)}
                                   disabled={isReadOnly}
-                                  className="w-5 h-5 text-[#1E6BB8] rounded focus:ring-[#1E6BB8] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="w-5 h-5 text-[#004aad] rounded focus:ring-[#004aad] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                                 />
                               </td>
                               <td className="px-4 py-3 text-center border-r border-gray-200">
@@ -442,7 +442,7 @@ export function PhanQuyenVaiTro() {
                                   checked={perm.approve}
                                   onChange={(e) => handlePermissionChange(perm.module, 'approve', e.target.checked)}
                                   disabled={isReadOnly}
-                                  className="w-5 h-5 text-[#1E6BB8] rounded focus:ring-[#1E6BB8] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="w-5 h-5 text-[#004aad] rounded focus:ring-[#004aad] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                                 />
                               </td>
                               {!isReadOnly && (
@@ -504,7 +504,7 @@ export function PhanQuyenVaiTro() {
                 <button
                   type="button"
                   onClick={() => setModalMode('edit')}
-                  className="flex items-center gap-2 px-8 py-2.5 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
+                  className="flex items-center gap-2 px-8 py-2.5 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
                 >
                   <Edit2 className="w-4 h-4" />
                   Chỉnh sửa quyền
@@ -514,7 +514,7 @@ export function PhanQuyenVaiTro() {
                 <button
                   type="submit"
                   form="role-form"
-                  className="flex items-center gap-2 px-8 py-2.5 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
+                  className="flex items-center gap-2 px-8 py-2.5 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
                 >
                   <Save className="w-4 h-4" />
                   {modalMode === 'create' ? 'Tạo vai trò' : 'Lưu thay đổi'}

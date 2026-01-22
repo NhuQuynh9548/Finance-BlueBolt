@@ -169,7 +169,7 @@ export function DraggableColumnHeader({
         {canSort ? (
           <button
             onClick={() => onSort && column.field && onSort(column.field)}
-            className="flex items-center gap-2 text-xs font-semibold text-gray-700 uppercase tracking-wider hover:text-[#1E6BB8] transition-colors"
+            className="flex items-center gap-2 text-xs font-semibold text-gray-700 uppercase tracking-wider hover:text-[#004aad] transition-colors"
           >
             {column.label}
             {renderSortIcon && column.field && renderSortIcon(column.field)}

@@ -136,7 +136,7 @@ export function ChuyenMonVaiTro() {
                 placeholder="Tìm kiếm mã, tên vai trò..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent"
               />
             </div>
             <button onClick={fetchData} className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg">
@@ -147,7 +147,7 @@ export function ChuyenMonVaiTro() {
           {/* Add Button */}
           <button
             onClick={handleAdd}
-            className="flex items-center gap-2 px-6 py-2 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors whitespace-nowrap"
+            className="flex items-center gap-2 px-6 py-2 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors whitespace-nowrap"
           >
             <Plus className="w-5 h-5" />
             Thêm Vai Trò
@@ -175,7 +175,7 @@ export function ChuyenMonVaiTro() {
                 {filteredRoles.map((role) => (
                   <tr key={role.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="font-mono font-semibold text-[#1E6BB8]">{role.code}</span>
+                      <span className="font-mono font-semibold text-[#004aad]">{role.code}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
@@ -252,7 +252,7 @@ export function ChuyenMonVaiTro() {
                         value={formData.code}
                         onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                         placeholder="BA, DEV..."
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                         required
                       />
                     </div>
@@ -265,7 +265,7 @@ export function ChuyenMonVaiTro() {
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         placeholder="Ví dụ: Developer"
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                         required
                       />
                     </div>
@@ -280,7 +280,7 @@ export function ChuyenMonVaiTro() {
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       placeholder="Mô tả về vai trò này..."
                       rows={3}
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all resize-none"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all resize-none"
                     />
                   </div>
                 </div>
@@ -298,7 +298,7 @@ export function ChuyenMonVaiTro() {
               <button
                 type="submit"
                 form="role-form"
-                className="px-8 py-2.5 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
+                className="px-8 py-2.5 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
               >
                 {editingRole ? 'Cập Nhật' : 'Tạo Mới'}
               </button>

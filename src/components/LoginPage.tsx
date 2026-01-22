@@ -40,7 +40,7 @@ export function LoginPage() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1E6BB8] via-[#1a5d9e] to-[#155a9e] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#004aad] via-[#1a5d9e] to-[#155a9e] flex items-center justify-center p-4">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute inset-0" style={{
@@ -57,7 +57,7 @@ export function LoginPage() {
             {/* Logo */}
             <div className="flex items-center gap-3">
               <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center shadow-2xl">
-                <span className="text-3xl font-bold bg-gradient-to-br from-[#1E6BB8] to-[#F7931E] bg-clip-text text-transparent">
+                <span className="text-3xl font-bold bg-gradient-to-br from-[#004aad] to-[#F7931E] bg-clip-text text-transparent">
                   BB
                 </span>
               </div>
@@ -105,7 +105,7 @@ export function LoginPage() {
         {/* Right Side - Login Form */}
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           {/* Form Header */}
-          <div className="bg-gradient-to-r from-[#1E6BB8] to-[#155a9e] px-8 py-6 text-white">
+          <div className="bg-gradient-to-r from-[#004aad] to-[#155a9e] px-8 py-6 text-white">
             <h2 className="text-2xl font-bold mb-2">Đăng nhập hệ thống</h2>
             <p className="text-blue-100 text-sm">Nhập thông tin đăng nhập để tiếp tục</p>
           </div>
@@ -131,7 +131,7 @@ export function LoginPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="example@bluebolt.vn"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#004aad] focus:border-transparent"
                   required
                 />
               </div>
@@ -147,7 +147,7 @@ export function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent pr-12"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#004aad] focus:border-transparent pr-12"
                     required
                   />
                   <button
@@ -163,10 +163,10 @@ export function LoginPage() {
               {/* Remember & Forgot */}
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 text-[#1E6BB8] border-gray-300 rounded focus:ring-[#1E6BB8]" />
+                  <input type="checkbox" className="w-4 h-4 text-[#004aad] border-gray-300 rounded focus:ring-[#004aad]" />
                   <span className="text-sm text-gray-600">Ghi nhớ đăng nhập</span>
                 </label>
-                <button type="button" className="text-sm text-[#1E6BB8] hover:underline font-medium">
+                <button type="button" className="text-sm text-[#004aad] hover:underline font-medium">
                   Quên mật khẩu?
                 </button>
               </div>
@@ -175,7 +175,7 @@ export function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-[#1E6BB8] to-[#155a9e] text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-[#004aad] to-[#155a9e] text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <>

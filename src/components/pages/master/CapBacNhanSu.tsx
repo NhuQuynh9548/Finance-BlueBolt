@@ -154,7 +154,7 @@ export function CapBacNhanSu() {
                 placeholder="Tìm kiếm mã, tên cấp bậc..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent"
               />
             </div>
 
@@ -166,7 +166,7 @@ export function CapBacNhanSu() {
           {/* Add Button */}
           <button
             onClick={handleAdd}
-            className="flex items-center gap-2 px-6 py-2 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors whitespace-nowrap"
+            className="flex items-center gap-2 px-6 py-2 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors whitespace-nowrap"
           >
             <Plus className="w-5 h-5" />
             Thêm Cấp Bậc
@@ -194,7 +194,7 @@ export function CapBacNhanSu() {
                 {filteredLevels.map((level) => (
                   <tr key={level.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="font-mono font-semibold text-[#1E6BB8]">{level.code}</span>
+                      <span className="font-mono font-semibold text-[#004aad]">{level.code}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
@@ -277,7 +277,7 @@ export function CapBacNhanSu() {
                         value={formData.code}
                         onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                         placeholder="L01, L02..."
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                         required
                       />
                     </div>
@@ -292,7 +292,7 @@ export function CapBacNhanSu() {
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="Ví dụ: Trưởng nhóm"
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                       required
                     />
                   </div>
@@ -306,7 +306,7 @@ export function CapBacNhanSu() {
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       placeholder="Mô tả về cấp bậc này..."
                       rows={3}
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all resize-none"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all resize-none"
                     />
                   </div>
                 </div>
@@ -324,7 +324,7 @@ export function CapBacNhanSu() {
               <button
                 type="submit"
                 form="level-form"
-                className="px-8 py-2.5 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
+                className="px-8 py-2.5 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
               >
                 {editingLevel ? 'Cập Nhật' : 'Tạo Mới'}
               </button>

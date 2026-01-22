@@ -454,7 +454,7 @@ export function QuanLyNhanSu() {
             </span>
           )}
           {canSelectBU && selectedBU !== 'all' && (
-            <span className="ml-2 text-sm font-semibold text-[#1E6BB8]">
+            <span className="ml-2 text-sm font-semibold text-[#004aad]">
               (Đang xem: {selectedBU})
             </span>
           )}
@@ -464,7 +464,7 @@ export function QuanLyNhanSu() {
       {/* Loading State */}
       {loading && (
         <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1E6BB8]"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#004aad]"></div>
           <span className="ml-3 text-gray-600">Đang tải dữ liệu...</span>
         </div>
       )}
@@ -494,7 +494,7 @@ export function QuanLyNhanSu() {
                   placeholder="Tìm kiếm theo Mã nhân viên hoặc Họ tên..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent"
                 />
               </div>
 
@@ -503,7 +503,7 @@ export function QuanLyNhanSu() {
                 <select
                   value={filterBU}
                   onChange={(e) => setFilterBU(e.target.value)}
-                  className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent bg-white"
+                  className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent bg-white"
                 >
                   <option value="all">Tất cả đơn vị</option>
                   {businessUnits.map(bu => (
@@ -514,7 +514,7 @@ export function QuanLyNhanSu() {
                 <select
                   value={filterSpecialization}
                   onChange={(e) => setFilterSpecialization(e.target.value)}
-                  className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent bg-white"
+                  className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent bg-white"
                 >
                   <option value="all">Tất cả chuyên môn</option>
                   {specializationList.map(spec => (
@@ -525,7 +525,7 @@ export function QuanLyNhanSu() {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent bg-white"
+                  className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent bg-white"
                 >
                   <option value="all">Tất cả trạng thái</option>
                   <option value="working">Đang làm việc</option>
@@ -551,7 +551,7 @@ export function QuanLyNhanSu() {
 
                 <button
                   onClick={handleCreate}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors shadow-md"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors shadow-md"
                 >
                   <Plus className="w-5 h-5" />
                   Thêm NV
@@ -617,7 +617,7 @@ export function QuanLyNhanSu() {
                       key={page}
                       onClick={() => setCurrentPage(page)}
                       className={`px-4 py-2 rounded-lg transition-colors ${currentPage === page
-                        ? 'bg-[#1E6BB8] text-white'
+                        ? 'bg-[#004aad] text-white'
                         : 'border border-gray-300 hover:bg-gray-50'
                         }`}
                     >
@@ -734,7 +734,7 @@ export function QuanLyNhanSu() {
                             value={formData.workStatus}
                             onChange={(e) => setFormData({ ...formData, workStatus: e.target.value as any })}
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                           >
                             <option value="working">Đang làm việc</option>
                             <option value="probation">Thử việc</option>
@@ -754,7 +754,7 @@ export function QuanLyNhanSu() {
                           onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                           placeholder="Nguyễn Văn A"
                           disabled={isReadOnly}
-                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                           required
                         />
                       </div>
@@ -772,7 +772,7 @@ export function QuanLyNhanSu() {
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             placeholder="email@bluebolt.vn"
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                             required
                           />
                         </div>
@@ -787,7 +787,7 @@ export function QuanLyNhanSu() {
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                             placeholder="0901234567"
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                             required
                           />
                         </div>
@@ -803,7 +803,7 @@ export function QuanLyNhanSu() {
                             value={formData.businessUnit}
                             onChange={(e) => setFormData({ ...formData, businessUnit: e.target.value })}
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                             required
                           >
                             <option value="">Chọn đơn vị</option>
@@ -820,7 +820,7 @@ export function QuanLyNhanSu() {
                             value={formData.specialization}
                             onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                             required
                           >
                             <option value="">Chọn chuyên môn</option>
@@ -841,7 +841,7 @@ export function QuanLyNhanSu() {
                             value={formData.level}
                             onChange={(e) => setFormData({ ...formData, level: e.target.value })}
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                             required
                           >
                             <option value="">Chọn cấp bậc</option>
@@ -863,7 +863,7 @@ export function QuanLyNhanSu() {
                               setFormData({ ...formData, joinDate: date });
                             }}
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                             required={false}
                           />
                         </div>
@@ -884,7 +884,7 @@ export function QuanLyNhanSu() {
                               setFormData({ ...formData, birthDate: date });
                             }}
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                             required={false}
                           />
                         </div>
@@ -899,7 +899,7 @@ export function QuanLyNhanSu() {
                             onChange={(e) => setFormData({ ...formData, idCard: e.target.value })}
                             placeholder="001234567890"
                             disabled={isReadOnly}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                             required={false}
                           />
                         </div>
@@ -917,7 +917,7 @@ export function QuanLyNhanSu() {
                           placeholder="123 Nguyễn Huệ, Q1, TP.HCM"
                           rows={2}
                           disabled={isReadOnly}
-                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed resize-none"
+                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:cursor-not-allowed resize-none"
                           required
                         />
                       </div>
@@ -938,7 +938,7 @@ export function QuanLyNhanSu() {
                     <button
                       type="submit"
                       form="employee-form"
-                      className="flex items-center gap-2 px-8 py-2.5 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
+                      className="flex items-center gap-2 px-8 py-2.5 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
                     >
                       <Save className="w-4 h-4" />
                       {modalMode === 'create' ? 'Tạo mới' : 'Lưu thay đổi'}

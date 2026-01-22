@@ -168,7 +168,7 @@ export function DanhMucThuChi() {
                 placeholder="Tìm kiếm mã, tên danh mục..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent"
               />
             </div>
 
@@ -176,7 +176,7 @@ export function DanhMucThuChi() {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent"
             >
               <option value="all">Tất cả loại</option>
               <option value="chi">Chi</option>
@@ -189,7 +189,7 @@ export function DanhMucThuChi() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="active">Đang hoạt động</option>
@@ -200,7 +200,7 @@ export function DanhMucThuChi() {
           {/* Add Button */}
           <button
             onClick={handleAdd}
-            className="flex items-center gap-2 px-6 py-2 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors whitespace-nowrap"
+            className="flex items-center gap-2 px-6 py-2 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors whitespace-nowrap"
           >
             <Plus className="w-5 h-5" />
             Thêm Danh Mục
@@ -226,7 +226,7 @@ export function DanhMucThuChi() {
               {filteredCategories.map((category) => (
                 <tr key={category.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="font-mono font-semibold text-[#1E6BB8]">{category.code}</span>
+                    <span className="font-mono font-semibold text-[#004aad]">{category.code}</span>
                   </td>
                   <td className="px-6 py-4">
                     <span className="font-medium text-gray-900">{category.name}</span>
@@ -313,7 +313,7 @@ export function DanhMucThuChi() {
                         value={formData.code}
                         onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                         placeholder="C01, T01, V01..."
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                         required
                       />
                     </div>
@@ -324,7 +324,7 @@ export function DanhMucThuChi() {
                       <select
                         value={formData.type}
                         onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                         required
                       >
                         <option value="chi">Chi</option>
@@ -344,7 +344,7 @@ export function DanhMucThuChi() {
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="Ví dụ: Chi phí vận hành"
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                       required
                     />
                   </div>
@@ -358,7 +358,7 @@ export function DanhMucThuChi() {
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       placeholder="Giải thích chi tiết mục đích sử dụng..."
                       rows={3}
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all resize-none"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all resize-none"
                       required
                     />
                   </div>
@@ -370,7 +370,7 @@ export function DanhMucThuChi() {
                     <select
                       value={formData.status}
                       onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                       required
                     >
                       <option value="active">Đang hoạt động</option>
@@ -392,7 +392,7 @@ export function DanhMucThuChi() {
               <button
                 type="submit"
                 form="category-form"
-                className="px-8 py-2.5 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
+                className="px-8 py-2.5 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
               >
                 {editingCategory ? 'Xác nhận cập nhật' : 'Xác nhận tạo mới'}
               </button>

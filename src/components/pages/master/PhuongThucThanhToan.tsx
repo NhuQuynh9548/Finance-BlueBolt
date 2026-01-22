@@ -136,7 +136,7 @@ export function PhuongThucThanhToan() {
                 placeholder="Tìm kiếm mã, tên phương thức..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent"
               />
             </div>
 
@@ -144,7 +144,7 @@ export function PhuongThucThanhToan() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="active">Đang hoạt động</option>
@@ -155,7 +155,7 @@ export function PhuongThucThanhToan() {
           {/* Add Button */}
           <button
             onClick={handleAdd}
-            className="flex items-center gap-2 px-6 py-2 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors whitespace-nowrap"
+            className="flex items-center gap-2 px-6 py-2 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors whitespace-nowrap"
           >
             <Plus className="w-5 h-5" />
             Thêm Phương Thức
@@ -185,7 +185,7 @@ export function PhuongThucThanhToan() {
                 {filteredMethods.map((method) => (
                   <tr key={method.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="font-mono font-semibold text-[#1E6BB8]">{method.code}</span>
+                      <span className="font-mono font-semibold text-[#004aad]">{method.code}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
@@ -274,7 +274,7 @@ export function PhuongThucThanhToan() {
                         value={formData.code}
                         onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                         placeholder="CASH, FT, CHQ..."
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                         required
                       />
                     </div>
@@ -285,7 +285,7 @@ export function PhuongThucThanhToan() {
                       <select
                         value={formData.status}
                         onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                         required
                       >
                         <option value="active">Đang hoạt động</option>
@@ -303,7 +303,7 @@ export function PhuongThucThanhToan() {
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="Ví dụ: Chuyển khoản"
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                       required
                     />
                   </div>
@@ -317,7 +317,7 @@ export function PhuongThucThanhToan() {
                       value={formData.type}
                       onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                       placeholder="Ví dụ: Financial Transfer"
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all"
                       required
                     />
                   </div>
@@ -331,7 +331,7 @@ export function PhuongThucThanhToan() {
                       onChange={(e) => setFormData({ ...formData, accountInfo: e.target.value })}
                       placeholder="Thông tin chi tiết về tài khoản..."
                       rows={3}
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1E6BB8] focus:border-transparent focus:bg-white transition-all resize-none"
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all resize-none"
                       required
                     />
                   </div>
@@ -350,7 +350,7 @@ export function PhuongThucThanhToan() {
               <button
                 type="submit"
                 form="method-form"
-                className="px-8 py-2.5 bg-[#1E6BB8] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
+                className="px-8 py-2.5 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
               >
                 {editingMethod ? 'Xác nhận cập nhật' : 'Xác nhận tạo mới'}
               </button>
