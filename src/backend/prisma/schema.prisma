@@ -26,6 +26,7 @@ model User {
   loginHistory LoginHistory[]
   businessUnit BusinessUnit?  @relation(fields: [buId], references: [id])
   role         Role?          @relation(fields: [roleId], references: [id])
+  notifications Notification[]
 
   @@map("users")
 }
@@ -174,6 +175,7 @@ model Transaction {
   updatedAt          DateTime                @updatedAt @map("updated_at")
   studentName        String?                 @map("student_name")
   otherName          String?                 @map("other_name")
+  projectName        String?                 @map("project_name")
   isAdvance          Boolean                 @default(false) @map("is_advance")
   allocationPreviews AllocationPreview[]
   attachments        TransactionAttachment[]
@@ -410,4 +412,16 @@ enum CategoryStatus {
   INACTIVE
 
   @@map("category_status")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  message   String
+  type      String   @default("info")
+  unread    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }

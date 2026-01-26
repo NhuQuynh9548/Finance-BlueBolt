@@ -178,6 +178,33 @@ router.post('/', async (req: AuthRequest, res: Response) => {
             }
         });
 
+        // Create notifications for Admins and CEOs
+        if (data.approvalStatus === 'PENDING') {
+            try {
+                const adminsAndCeos = await (prisma as any).user.findMany({
+                    where: {
+                        role: {
+                            name: {
+                                in: ['Admin', 'CEO'],
+                                mode: 'insensitive'
+                            }
+                        }
+                    }
+                });
+
+                await (prisma as any).notification.createMany({
+                    data: adminsAndCeos.map((u: any) => ({
+                        userId: u.id,
+                        message: `Phiếu ${data.transactionType === 'INCOME' ? 'thu' : 'chi'} #${atomicCode} chờ duyệt`,
+                        type: 'warning',
+                        unread: true
+                    }))
+                });
+            } catch (notifErr) {
+                console.error('Failed to create notifications:', notifErr);
+            }
+        }
+
         res.status(201).json(transaction);
     } catch (error) {
         console.error('Create transaction error:', error);
@@ -266,6 +293,22 @@ router.put('/:id/approve', async (req: AuthRequest, res: Response) => {
             }
         });
 
+        // Notify the creator
+        if (transaction.createdBy) {
+            try {
+                await (prisma as any).notification.create({
+                    data: {
+                        userId: transaction.createdBy,
+                        message: `Phiếu ${transaction.transactionType === 'INCOME' ? 'thu' : 'chi'} #${transaction.transactionCode} đã được duyệt`,
+                        type: 'success',
+                        unread: true
+                    }
+                });
+            } catch (notifErr) {
+                console.error('Failed to create notification:', notifErr);
+            }
+        }
+
         res.json(transaction);
     } catch (error) {
         console.error('Approve transaction error:', error);
@@ -299,6 +342,22 @@ router.put('/:id/reject', async (req: AuthRequest, res: Response) => {
                 businessUnit: true
             }
         });
+
+        // Notify the creator
+        if (transaction.createdBy) {
+            try {
+                await (prisma as any).notification.create({
+                    data: {
+                        userId: transaction.createdBy,
+                        message: `Phiếu ${transaction.transactionType === 'INCOME' ? 'thu' : 'chi'} #${transaction.transactionCode} bị từ chối: ${reason}`,
+                        type: 'error',
+                        unread: true
+                    }
+                });
+            } catch (notifErr) {
+                console.error('Failed to create notification:', notifErr);
+            }
+        }
 
         res.json(transaction);
     } catch (error) {

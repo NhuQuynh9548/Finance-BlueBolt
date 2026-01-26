@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, AlertCircle, CheckCircle, Copy, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import logoImage from '../assets/logo-bluebolt.png';
 
 // Demo accounts for testing
 // Demo accounts removed as requested
@@ -55,15 +56,9 @@ export function LoginPage() {
         <div className="hidden lg:block text-white">
           <div className="space-y-8">
             {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center shadow-2xl">
-                <span className="text-3xl font-bold bg-gradient-to-br from-[#004aad] to-[#F7931E] bg-clip-text text-transparent">
-                  BB
-                </span>
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold">BLUEBOLT</h1>
-                <p className="text-blue-200 text-sm">Financial Management System</p>
+            <div className="flex items-center">
+              <div className='bg-white p-2 rounded-lg'>
+                <img src={logoImage} alt="Logo BlueBolt" className="h-20 w-auto" />
               </div>
             </div>
 

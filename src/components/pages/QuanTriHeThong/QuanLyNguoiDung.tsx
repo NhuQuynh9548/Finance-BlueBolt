@@ -365,8 +365,8 @@ export function QuanLyNguoiDung() {
               className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent bg-white"
             >
               <option value="all">Tất cả trạng thái</option>
-              <option value="active">Active</option>
-              <option value="locked">Locked</option>
+              <option value="active">Hoạt động</option>
+              <option value="locked">Khóa</option>
             </select>
 
             {canSeeBUFilter && (
@@ -417,16 +417,16 @@ export function QuanLyNguoiDung() {
                   </button>
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Role</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vai trò</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Business Unit</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Data Scope</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Trạng Thái</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Phạm vi dữ liệu</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Trạng thái</th>
                 <th className="px-4 py-3 text-left">
                   <button
                     onClick={() => handleSort('lastLogin')}
                     className="flex items-center gap-2 text-xs font-semibold text-gray-600 uppercase tracking-wider hover:text-[#004aad] transition-colors"
                   >
-                    Last Login
+                    Đăng nhập gần nhất
                     {getSortIcon('lastLogin')}
                   </button>
                 </th>
@@ -647,7 +647,7 @@ export function QuanLyNguoiDung() {
                   {/* Phân quyền & Data Scope */}
                   <div>
                     <h3 className="text-sm font-bold text-gray-700 uppercase mb-4 pb-2 border-b border-gray-200">
-                      Phân quyền & Data Scope
+                      Phân quyền & Phạm vi dữ liệu
                     </h3>
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
@@ -670,7 +670,7 @@ export function QuanLyNguoiDung() {
                       </div>
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Data Scope (Auto)
+                          Phạm vi dữ liệu (Auto)
                         </label>
                         <div className={`px-4 py-2.5 rounded-lg border-2 ${getDataScopeBadgeColor(formData.dataScope || 'personal')}`}>
                           <span className="font-bold">{getDataScopeLabel(formData.dataScope || 'personal')}</span>

@@ -20,6 +20,7 @@ import userRoutes from './routes/users';
 import roleRoutes from './routes/roles';
 import logRoutes from './routes/logs';
 import settingRoutes from './routes/settings';
+import notificationRoutes from './routes/notifications';
 import path from 'path';
 
 // Load environment variables
@@ -52,6 +53,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/settings', settingRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Swagger API Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {

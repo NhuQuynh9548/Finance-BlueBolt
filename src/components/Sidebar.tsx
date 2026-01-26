@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import logoImage from 'figma:asset/logo-bluebolt.png';
+import logoImage from '../assets/logo-bluebolt.png';
 import {
   LayoutDashboard,
   Building2,
@@ -116,18 +116,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           path: '/master/danh-muc'
         },
         {
-          id: 'master-allocation',
-          label: 'Phân bổ chi phí',
-          icon: <DollarSign className="w-4 h-4" />,
-          path: '/master/phan-bo-chi-phi'
-        },
-        {
-          id: 'master-project',
-          label: 'Quản lý dự án',
-          icon: <Briefcase className="w-4 h-4" />,
-          path: '/master/du-an'
-        },
-        {
           id: 'master-rank',
           label: 'Cấp bậc nhân sự',
           icon: <Award className="w-4 h-4" />,
@@ -228,7 +216,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     }
 
     const Component = item.path ? Link : 'div';
-    const props = item.path ? { to: item.path } : {};
+    const props: any = item.path ? { to: item.path } : {};
 
     return (
       <Component

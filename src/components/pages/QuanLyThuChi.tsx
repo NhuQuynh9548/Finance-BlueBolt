@@ -35,7 +35,7 @@ interface Transaction {
   category?: { id: string; name: string };
   projectId?: string;
   project?: { id: string; name: string; code: string };
-  objectType: 'PARTNER' | 'EMPLOYEE';
+  objectType: 'PARTNER' | 'EMPLOYEE' | 'STUDENT' | 'OTHER';
   partnerId?: string;
   partner?: { id: string; partnerName: string };
   employeeId?: string;
@@ -56,6 +56,7 @@ interface Transaction {
   rejectionReason?: string;
   description: string;
   objectName?: string; // Helper for display
+  projectName?: string; // Manual name entry
 }
 
 type SortField = 'transactionDate' | 'transactionCode' | 'amount';
@@ -81,7 +82,6 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: 'businessUnit', label: 'Đơn vị (BU)', sortable: false, align: 'left', width: 150, visible: true },
   { id: 'project', label: 'Dự án', sortable: false, align: 'left', width: 150, visible: true },
   { id: 'amount', label: 'Số tiền', sortable: true, align: 'right', width: 140, visible: true },
-  { id: 'costAllocation', label: 'Phân bổ', sortable: false, align: 'center', width: 120, visible: true },
   { id: 'paymentStatus', label: 'TT', sortable: false, align: 'left', width: 130, visible: true },
   { id: 'approvalStatus', label: 'Phê duyệt', sortable: false, align: 'left', width: 130, visible: true },
   { id: 'actions', label: 'Hành động', sortable: false, align: 'center', width: 120, visible: true },
@@ -132,11 +132,38 @@ export function QuanLyThuChi() {
   const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
   const [showFilters, setShowFilters] = useState(true);
 
+  // Load columns from localStorage on mount
+  useEffect(() => {
+    const savedColumns = localStorage.getItem('thuChiColumns');
+    if (savedColumns) {
+      try {
+        const parsed = JSON.parse(savedColumns);
+        // Filter out costAllocation in case it's still in the user's localStorage
+        const filtered = parsed.filter((col: ColumnConfig) => col.id !== 'costAllocation');
+        setColumns(filtered);
+      } catch (e) {
+        console.error('Error parsing saved columns:', e);
+      }
+    }
+  }, []);
+
+  // Save columns to localStorage when they change
+  useEffect(() => {
+    if (columns !== DEFAULT_COLUMNS) {
+      localStorage.setItem('thuChiColumns', JSON.stringify(columns));
+    }
+  }, [columns]);
+
   const moveColumn = (fromIndex: number, toIndex: number) => {
     const newColumns = [...columns];
     const [movedColumn] = newColumns.splice(fromIndex, 1);
     newColumns.splice(toIndex, 0, movedColumn);
     setColumns(newColumns);
+  };
+
+  const handleResetColumns = () => {
+    setColumns(DEFAULT_COLUMNS);
+    localStorage.removeItem('thuChiColumns');
   };
 
   // Helper: Format Date
@@ -147,7 +174,7 @@ export function QuanLyThuChi() {
 
   // Helper: Format Currency with thousand separators (dots)
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN').format(amount);
+    return new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
   };
 
   // Fetch Data
@@ -404,27 +431,18 @@ export function QuanLyThuChi() {
         uploadedAttachments = await uploadService.uploadFiles(selectedFiles);
       }
 
-      // 2. Prepare Allocation Previews if INDIRECT
-      let previews = undefined;
-      if (formData.costAllocation === 'INDIRECT' && formData.allocationRuleId) {
-        const rule = allocationRules.find(r => r.id === formData.allocationRuleId);
-        previews = rule?.allocations?.map((alloc: any) => ({
-          buName: businessUnits.find(bu => bu.id === alloc.buId)?.name || 'N/A',
-          percentage: alloc.percentage,
-          amount: (formData.amount! * alloc.percentage) / 100
-        }));
-      }
-
-      // 3. Prepare Payload
+      // 2. Prepare Payload (Force DIRECT allocation)
       const payload: any = {
         ...formData,
+        costAllocation: 'DIRECT',
+        allocationRuleId: undefined,
         transactionDate: formData.transactionDate
           ? new Date(formData.transactionDate).toISOString()
           : new Date().toISOString(), // Default to today if not set
         amount: Number(formData.amount),
         approvalStatus: submitAction,
         attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-        allocationPreviews: previews
+        allocationPreviews: undefined
       };
 
       // Handle "All Employees in BU" - Now creates a SINGLE transaction
@@ -572,61 +590,57 @@ export function QuanLyThuChi() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        {/* Income */}
-        <div className="bg-green-600 text-white p-4 rounded-xl shadow-sm relative overflow-hidden">
-          <div className="flex justify-between items-start z-10 relative">
-            <div className="p-2 bg-white/20 rounded-lg">
-              <TrendingUp className="w-6 h-6" />
-            </div>
-            <div className="text-right">
-              <p className="text-xs opacity-80 mb-1">Tổng Thu</p>
-              <p className="text-2xl font-bold">{formatCurrency(stats.income)}</p>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {/* Total Revenue */}
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-sm text-gray-600 mb-2">Tổng Doanh thu</p>
+              <h3 className="text-2xl font-bold text-gray-800">
+                {formatCurrency(stats.income)}
+              </h3>
             </div>
           </div>
-          <p className="text-xs mt-4 opacity-80">Đã phê duyệt</p>
+          <p className="text-xs mt-4 text-green-600 font-medium">Đã phê duyệt</p>
         </div>
 
-        {/* Expense */}
-        <div className="bg-red-600 text-white p-4 rounded-xl shadow-sm relative overflow-hidden">
-          <div className="flex justify-between items-start z-10 relative">
-            <div className="p-2 bg-white/20 rounded-lg">
-              <TrendingDown className="w-6 h-6" />
-            </div>
-            <div className="text-right">
-              <p className="text-xs opacity-80 mb-1">Tổng Chi</p>
-              <p className="text-2xl font-bold">{formatCurrency(stats.expense)}</p>
+        {/* Total Expense */}
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-sm text-gray-600 mb-2">Tổng Chi phí</p>
+              <h3 className="text-2xl font-bold text-gray-800">
+                {formatCurrency(stats.expense)}
+              </h3>
             </div>
           </div>
-          <p className="text-xs mt-4 opacity-80">Đã phê duyệt</p>
+          <p className="text-xs mt-4 text-red-600 font-medium">Đã phê duyệt</p>
         </div>
 
-        {/* Balance */}
-        <div className="bg-blue-600 text-white p-4 rounded-xl shadow-sm relative overflow-hidden">
-          <div className="flex justify-between items-start z-10 relative">
-            <div className="p-2 bg-white/20 rounded-lg">
-              <DollarSign className="w-6 h-6" />
-            </div>
-            <div className="text-right">
-              <p className="text-xs opacity-80 mb-1">Số dư hiện tại</p>
-              <p className="text-2xl font-bold">{formatCurrency(stats.balance)}</p>
+        {/* Total Loan */}
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-sm text-gray-600 mb-2">Tổng Vay</p>
+              <h3 className="text-2xl font-bold text-gray-800">
+                {formatCurrency(stats.debt)}
+              </h3>
             </div>
           </div>
-          <p className="text-xs mt-4 opacity-80">Thu - Chi</p>
+          <p className="text-xs mt-4 text-orange-600 font-medium">Chưa thanh toán</p>
         </div>
 
-        {/* Debt */}
-        <div className="bg-orange-500 text-white p-4 rounded-xl shadow-sm relative overflow-hidden">
-          <div className="flex justify-between items-start z-10 relative">
-            <div className="p-2 bg-white/20 rounded-lg">
-              <RotateCcw className="w-6 h-6" />
-            </div>
-            <div className="text-right">
-              <p className="text-xs opacity-80 mb-1">Tổng nợ vay</p>
-              <p className="text-2xl font-bold">{formatCurrency(stats.debt)}</p>
+        {/* Profit */}
+        <div className={`${stats.balance >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} rounded-xl shadow-md p-6 border`}>
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className={`text-sm mb-2 ${stats.balance >= 0 ? 'text-green-800' : 'text-red-800'}`}>Lợi nhuận</p>
+              <h3 className={`text-2xl font-bold ${stats.balance >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+                {formatCurrency(stats.balance)}
+              </h3>
             </div>
           </div>
-          <p className="text-xs mt-4 opacity-80">Chưa thanh toán</p>
+          <p className={`text-xs mt-4 font-medium ${stats.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>Thu - Chi</p>
         </div>
       </div>
 
@@ -710,7 +724,10 @@ export function QuanLyThuChi() {
 
             {/* Action Buttons Row */}
             <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100">
-              <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2">
+              <button
+                onClick={handleResetColumns}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2"
+              >
                 <RefreshCw className="w-4 h-4" /> Đặt lại cột
               </button>
 
@@ -799,10 +816,10 @@ export function QuanLyThuChi() {
                       if (col.id === 'paymentMethod') return <td className="px-6 py-4 text-sm text-gray-600 font-medium">{txn.paymentMethod?.name || '-'}</td>;
                       if (col.id === 'businessUnit') return (
                         <td className="px-6 py-4 text-sm text-gray-700">
-                          {txn.costAllocation === 'INDIRECT' ? 'Nhiều đơn vị' : (txn.businessUnit?.name || '-')}
+                          {txn.businessUnit?.name || '-'}
                         </td>
                       );
-                      if (col.id === 'project') return <td className="px-6 py-4 text-sm text-gray-600">{txn.project?.name || '-'}</td>;
+                      if (col.id === 'project') return <td className="px-6 py-4 text-sm text-gray-600">{txn.projectName || txn.project?.name || '-'}</td>;
                       if (col.id === 'amount') return (
                         <td className={`px-6 py-4 text-right text-sm font-bold ${txn.transactionType === 'INCOME' ? 'text-green-600' :
                           txn.transactionType === 'EXPENSE' ? 'text-red-600' : 'text-blue-600'
@@ -810,9 +827,6 @@ export function QuanLyThuChi() {
                           {txn.transactionType === 'INCOME' ? '+' : '-'}{formatCurrency(txn.amount)}
                         </td>
                       );
-                      if (col.id === 'costAllocation') return <td className="px-6 py-4 text-center text-sm text-gray-700">
-                        {txn.costAllocation === 'DIRECT' ? 'Trực tiếp' : 'Gián tiếp'}
-                      </td>;
                       if (col.id === 'paymentStatus') return <td className="px-6 py-4 text-sm text-gray-700">
                         <div className="flex items-center gap-2">
                           <span>
@@ -956,19 +970,14 @@ export function QuanLyThuChi() {
                       <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
                         Dự Án
                       </label>
-                      <div className="relative">
-                        <select
-                          disabled={modalMode === 'view'}
-                          value={formData.projectId || ''}
-                          onChange={e => setFormData({ ...formData, projectId: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none bg-white"
-                          style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
-                        >
-                          <option value="">Không chọn dự án</option>
-                          {projects.map(p => <option key={p.id} value={p.id}>{p.code} - {p.name}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                      </div>
+                      <input
+                        type="text"
+                        disabled={modalMode === 'view'}
+                        placeholder="Nhập tên dự án..."
+                        value={formData.projectName || ''}
+                        onChange={e => setFormData({ ...formData, projectName: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white"
+                      />
                     </div>
                     <div className="col-span-2">
                       <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
@@ -1174,100 +1183,26 @@ export function QuanLyThuChi() {
                     <span className="w-1 h-4 bg-blue-600 rounded-full"></span>
                     Số tiền {modalType !== 'INCOME' && modalType !== 'LOAN' && 'và phân bổ chi phí'}
                   </h3>
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-5">
-                    <div className={(modalType === 'INCOME' || modalType === 'LOAN') ? 'col-span-2' : ''}>
-                      <label className="block text-[13px] font-semibold text-gray-600 mb-1.5">
-                        <span className="text-gray-400 font-bold mr-1">$</span> <span className="text-red-500 font-bold">*</span> Số Tiền (VND)
-                      </label>
-                      <div className="space-y-1">
-                        <input
-                          type="text"
-                          required
-                          disabled={modalMode === 'view'}
-                          value={formData.amount !== undefined ? formatCurrency(formData.amount) : ''}
-                          onChange={e => {
-                            const rawValue = e.target.value.replace(/\./g, '').replace(/[^0-9]/g, '');
-                            const numValue = rawValue ? parseInt(rawValue, 10) : 0;
-                            setFormData({ ...formData, amount: numValue });
-                          }}
-                          className="w-full px-4 py-2 border border-gray-200 rounded-lg font-bold text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                          placeholder="0"
-                        />
-                        <p className="text-[12px] italic text-gray-500">Số tiền gốc: {formData.amount || 0}</p>
-                      </div>
+                  <div className="col-span-2">
+                    <label className="block text-[13px] font-semibold text-gray-600 mb-1.5">
+                      <span className="text-gray-400 font-bold mr-1">$</span> <span className="text-red-500 font-bold">*</span> Số Tiền (VND)
+                    </label>
+                    <div className="space-y-1">
+                      <input
+                        type="text"
+                        required
+                        disabled={modalMode === 'view'}
+                        value={formData.amount !== undefined ? formatCurrency(formData.amount) : ''}
+                        onChange={e => {
+                          const rawValue = e.target.value.replace(/\./g, '').replace(/[^0-9]/g, '');
+                          const numValue = rawValue ? parseInt(rawValue, 10) : 0;
+                          setFormData({ ...formData, amount: numValue });
+                        }}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg font-bold text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        placeholder="0"
+                      />
+                      <p className="text-[12px] italic text-gray-500">Số tiền gốc: {formData.amount || 0}</p>
                     </div>
-                    {modalType !== 'INCOME' && modalType !== 'LOAN' && (
-                      <>
-                        <div>
-                          <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
-                            <span className="text-red-500 font-bold">*</span> Phân Bổ Chi Phí
-                          </label>
-                          <div className="relative">
-                            <select
-                              required
-                              disabled={modalMode === 'view'}
-                              value={formData.costAllocation || 'DIRECT'}
-                              onChange={e => setFormData({ ...formData, costAllocation: e.target.value as any })}
-                              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none bg-white"
-                              style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
-                            >
-                              <option value="DIRECT">Trực tiếp</option>
-                              <option value="INDIRECT">Gián tiếp</option>
-                            </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                          </div>
-                        </div>
-                        {formData.costAllocation === 'INDIRECT' && (
-                          <div className="col-span-2 space-y-4">
-                            <div>
-                              <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
-                                <span className="text-red-500 font-bold">*</span> Quy tắc phân bổ
-                              </label>
-                              <div className="relative">
-                                <select
-                                  required
-                                  disabled={modalMode === 'view'}
-                                  value={formData.allocationRuleId || ''}
-                                  onChange={e => setFormData({ ...formData, allocationRuleId: e.target.value })}
-                                  className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none bg-white font-medium"
-                                  style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
-                                >
-                                  <option value="">Chọn quy tắc...</option>
-                                  {allocationRules.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                              </div>
-                            </div>
-
-                            {formData.allocationRuleId && formData.amount && (
-                              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                                <p className="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-3">Xem trước phân bổ</p>
-                                <table className="w-full text-sm">
-                                  <thead>
-                                    <tr className="text-gray-400 text-[11px] uppercase text-left">
-                                      <th className="pb-2 font-semibold">Business Unit</th>
-                                      <th className="pb-2 font-semibold text-right">Tỷ lệ (%)</th>
-                                      <th className="pb-2 font-semibold text-right">Số tiền dự kiến</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-gray-200">
-                                    {allocationRules.find(r => r.id === formData.allocationRuleId)?.allocations?.map((alloc: any, idx: number) => (
-                                      <tr key={idx} className="text-gray-600">
-                                        <td className="py-2.5 font-medium">{businessUnits.find(bu => bu.id === alloc.buId)?.name || 'N/A'}</td>
-                                        <td className="py-2.5 text-right font-semibold text-blue-600">{alloc.percentage}%</td>
-                                        <td className="py-2.5 text-right font-bold text-gray-900">
-                                          {formatCurrency((formData.amount! * alloc.percentage) / 100)}
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    )}
                   </div>
                 </div>
                 {/* SECTION 4: HỢP ĐỒNG ĐÍNH KÈM */}

@@ -3,6 +3,7 @@ import { Search, Bell, ChevronDown, User, Lock, LogOut, Building2 } from 'lucide
 import { useNavigate, Link } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
+import { notificationService, Notification } from '../services/notificationService';
 
 interface HeaderProps {
   sidebarCollapsed: boolean;
@@ -17,6 +18,44 @@ export function Header({ sidebarCollapsed }: HeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [realNotifications, setRealNotifications] = useState<Notification[]>([]);
+
+  // Fetch notifications
+  const fetchNotifications = async () => {
+    try {
+      const data = await notificationService.getNotifications();
+      setRealNotifications(data);
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchNotifications();
+      // Poll for notifications every 30 seconds
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [currentUser]);
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await notificationService.markAsRead(id);
+      fetchNotifications();
+    } catch (error) {
+      console.error('Failed to mark as read:', error);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      fetchNotifications();
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    }
+  };
 
   // Get current BU display
   const currentBU = availableBUs.find(bu => bu.id === selectedBU);
@@ -27,14 +66,14 @@ export function Header({ sidebarCollapsed }: HeaderProps) {
     navigate('/login');
   };
 
-  // Mock notifications
-  const notifications = [
-    { id: 1, message: 'Phiếu chi #001 chờ duyệt', time: '5 phút trước', unread: true },
-    { id: 2, message: 'Phiếu thu #025 đã được duyệt', time: '1 giờ trước', unread: true },
-    { id: 3, message: 'Phiếu chi #002 bị từ chối', time: '2 giờ trước', unread: false },
-  ];
+  // Mock notifications removed
+  // const notifications = [
+  //   { id: 1, message: 'Phiếu chi #001 chờ duyệt', time: '5 phút trước', unread: true },
+  //   { id: 2, message: 'Phiếu thu #025 đã được duyệt', time: '1 giờ trước', unread: true },
+  //   { id: 3, message: 'Phiếu chi #002 bị từ chối', time: '2 giờ trước', unread: false },
+  // ];
 
-  const unreadCount = notifications.filter(n => n.unread).length;
+  const unreadCount = realNotifications.filter(n => n.unread).length;
 
   return (
     <header className={`fixed top-0 right-0 h-16 bg-white border-b border-gray-200 shadow-sm z-40 transition-all duration-300 ${sidebarCollapsed ? 'left-20' : 'left-64'
@@ -136,22 +175,34 @@ export function Header({ sidebarCollapsed }: HeaderProps) {
                     <h3 className="font-semibold text-gray-800">Thông báo</h3>
                   </div>
                   <div className="max-h-96 overflow-y-auto">
-                    {notifications.map((notif) => (
-                      <div
-                        key={notif.id}
-                        className={`px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 ${notif.unread ? 'bg-blue-50' : ''
-                          }`}
-                      >
-                        <p className={`text-sm ${notif.unread ? 'font-medium text-gray-800' : 'text-gray-600'}`}>
-                          {notif.message}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">{notif.time}</p>
+                    {realNotifications.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-gray-500">
+                        <p className="text-sm">Không có thông báo nào</p>
                       </div>
-                    ))}
+                    ) : (
+                      realNotifications.map((notif) => (
+                        <div
+                          key={notif.id}
+                          onClick={() => notif.unread && handleMarkAsRead(notif.id)}
+                          className={`px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 ${notif.unread ? 'bg-blue-50' : ''
+                            }`}
+                        >
+                          <p className={`text-sm ${notif.unread ? 'font-medium text-gray-800' : 'text-gray-600'}`}>
+                            {notif.message}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {new Date(notif.createdAt).toLocaleString('vi-VN')}
+                          </p>
+                        </div>
+                      ))
+                    )}
                   </div>
                   <div className="px-4 py-3 border-t border-gray-200 text-center">
-                    <button className="text-sm text-[#004aad] hover:underline font-medium">
-                      Xem tất cả thông báo
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="text-sm text-[#004aad] hover:underline font-medium"
+                    >
+                      Đánh dấu tất cả là đã đọc
                     </button>
                   </div>
                 </div>
@@ -167,7 +218,8 @@ export function Header({ sidebarCollapsed }: HeaderProps) {
             >
               {/* Avatar */}
               <div className="w-9 h-9 bg-[#004aad] rounded-full flex items-center justify-center text-white font-semibold">
-                {currentUser.name.split(' ').slice(-1)[0].charAt(0)}
+                {currentUser.name.split(' ').slice(0)[0].charAt(0).toUpperCase()}
+                {/* {currentUser.name.charAt(0).toUpperCase()} */}
               </div>
               {/* User Info */}
               <div className="text-left hidden lg:block">
