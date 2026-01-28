@@ -1033,8 +1033,8 @@ export function QuanLyThuChi() {
                     Đối tượng giao dịch
                   </h3>
                   <div className="grid grid-cols-2 gap-x-8 gap-y-5">
-                    <div className="col-span-2 flex gap-10 mb-2">
-                      <label className="flex items-center cursor-pointer gap-2.5 group">
+                    <div className="col-span-2 flex mb-2" style={{ gap: '50px' }}>
+                      <label className="flex-shrink-0 flex items-center cursor-pointer gap-2 group whitespace-nowrap mr-10">
                         <input
                           type="radio"
                           name="objectType"
@@ -1045,7 +1045,7 @@ export function QuanLyThuChi() {
                         />
                         <span className={`text-sm font-semibold ${formData.objectType === 'PARTNER' ? 'text-gray-900' : 'text-gray-500'}`}>Đối tác</span>
                       </label>
-                      <label className="flex items-center cursor-pointer gap-2.5 group">
+                      <label className="flex-shrink-0 flex items-center cursor-pointer gap-2 group whitespace-nowrap mr-10">
                         <input
                           type="radio"
                           name="objectType"
@@ -1057,7 +1057,7 @@ export function QuanLyThuChi() {
                         <span className={`text-sm font-semibold ${formData.objectType === 'EMPLOYEE' ? 'text-gray-900' : 'text-gray-500'}`}>Nhân viên</span>
                       </label>
                       {modalType === 'INCOME' && (
-                        <label className="flex items-center cursor-pointer gap-2.5 group">
+                        <label className="flex-shrink-0 flex items-center cursor-pointer gap-2 group whitespace-nowrap mr-10">
                           <input
                             type="radio"
                             name="objectType"
@@ -1070,7 +1070,7 @@ export function QuanLyThuChi() {
                         </label>
                       )}
                       {modalType === 'LOAN' && (
-                        <label className="flex items-center cursor-pointer gap-2.5 group">
+                        <label className="flex-shrink-0 flex items-center cursor-pointer gap-2 group whitespace-nowrap mr-10">
                           <input
                             type="radio"
                             name="objectType"
@@ -1116,7 +1116,14 @@ export function QuanLyThuChi() {
                               <option value="">Chọn...</option>
                               {formData.objectType === 'PARTNER'
                                 ? partners
-                                  .filter(p => !formData.businessUnitId || p.businessUnitId === formData.businessUnitId || p.businessUnit?.name === businessUnits.find(bu => bu.id === formData.businessUnitId)?.name)
+                                  .filter(p => {
+                                    if (!formData.businessUnitId) return true;
+                                    // Check if partner belongs to selected BU (many-to-many support)
+                                    const hasSelectedBU = p.businessUnitId === formData.businessUnitId ||
+                                      p.businessUnits?.some((bu: any) => bu.id === formData.businessUnitId) ||
+                                      p.businessUnit?.name === businessUnits.find(bu => bu.id === formData.businessUnitId)?.name;
+                                    return hasSelectedBU;
+                                  })
                                   .map(p => <option key={p.id} value={p.id}>{p.partnerName}</option>)
                                 : (
                                   <>
