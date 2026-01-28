@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, Plus, Eye, Edit2, Trash2, DollarSign, X, AlertCircle, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Save, Calendar, Building2, FileText, Paperclip, TrendingUp, TrendingDown, RefreshCw, ChevronDown, ChevronUp, User, Users, Upload, Printer, Send, CheckCircle, XCircle, Image as ImageIcon, ExternalLink, Briefcase, RotateCcw, Settings, GripVertical, Layers } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { transactionService } from '../../services/transactionService';
@@ -89,6 +90,8 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
 
 export function QuanLyThuChi() {
   const { selectedBU, canSelectBU, currentUser } = useApp();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // States
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -227,6 +230,22 @@ export function QuanLyThuChi() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Handle direct link to a transaction from notification
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const txnId = params.get('id');
+
+    if (txnId && !loading && transactions.length > 0) {
+      const txn = transactions.find(t => t.id === txnId);
+      if (txn) {
+        handleView(txn);
+        // Clean up URL to prevent re-opening on next render
+        // We use { replace: true } to not clutter history
+        navigate(location.pathname, { replace: true });
+      }
+    }
+  }, [location.search, transactions, loading, navigate, location.pathname]);
 
   // Debounce Search
   useEffect(() => {

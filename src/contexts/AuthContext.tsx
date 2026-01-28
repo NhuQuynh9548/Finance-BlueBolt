@@ -62,9 +62,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   React.useEffect(() => {
     const verifyAuth = async () => {
       const token = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('currentUser');
 
-      if (token && storedUser) {
+      if (token) {
         try {
           // Verify token by fetching current user from API
           const user = await authService.getCurrentUser();
@@ -76,7 +75,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
           console.error('Token verification failed:', error);
           localStorage.removeItem('token');
           localStorage.removeItem('currentUser');
+          setIsAuthenticated(false);
+          setCurrentUser(null);
         }
+      } else {
+        setIsAuthenticated(false);
+        setCurrentUser(null);
       }
 
       setLoading(false);

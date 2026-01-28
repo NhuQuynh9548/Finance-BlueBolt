@@ -414,13 +414,15 @@ enum CategoryStatus {
 }
 
 model Notification {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  message   String
-  type      String   @default("info")
-  unread    Boolean  @default(true)
-  createdAt DateTime @default(now()) @map("created_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  message    String
+  type       String   @default("info")
+  unread     Boolean  @default(true)
+  relatedId  String?  @map("related_id")
+  targetPath String?  @map("target_path")
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }

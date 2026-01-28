@@ -6,6 +6,8 @@ export interface Notification {
     message: string;
     type: string;
     unread: boolean;
+    relatedId?: string;
+    targetPath?: string;
     createdAt: string;
 }
 

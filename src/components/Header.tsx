@@ -183,7 +183,13 @@ export function Header({ sidebarCollapsed }: HeaderProps) {
                       realNotifications.map((notif) => (
                         <div
                           key={notif.id}
-                          onClick={() => notif.unread && handleMarkAsRead(notif.id)}
+                          onClick={() => {
+                            if (notif.unread) handleMarkAsRead(notif.id);
+                            if (notif.targetPath && notif.relatedId) {
+                              navigate(`${notif.targetPath}?id=${notif.relatedId}&t=${Date.now()}`);
+                              setShowNotifications(false);
+                            }
+                          }}
                           className={`px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 ${notif.unread ? 'bg-blue-50' : ''
                             }`}
                         >

@@ -197,12 +197,30 @@ router.post('/', async (req: AuthRequest, res: Response) => {
                         userId: u.id,
                         message: `Phiếu ${data.transactionType === 'INCOME' ? 'thu' : 'chi'} #${atomicCode} chờ duyệt`,
                         type: 'warning',
-                        unread: true
+                        unread: true,
+                        relatedId: transaction.id,
+                        targetPath: '/quan-ly-thu-chi'
                     }))
                 });
             } catch (notifErr) {
                 console.error('Failed to create notifications:', notifErr);
             }
+        }
+
+        // Notify the creator
+        try {
+            await (prisma as any).notification.create({
+                data: {
+                    userId: req.user!.id,
+                    message: `Bạn đã tạo phiếu ${data.transactionType === 'INCOME' ? 'thu' : 'chi'} #${atomicCode} thành công`,
+                    type: 'info',
+                    unread: true,
+                    relatedId: transaction.id,
+                    targetPath: '/quan-ly-thu-chi'
+                }
+            });
+        } catch (notifErr) {
+            console.error('Failed to create creator notification:', notifErr);
         }
 
         res.status(201).json(transaction);
@@ -301,7 +319,9 @@ router.put('/:id/approve', async (req: AuthRequest, res: Response) => {
                         userId: transaction.createdBy,
                         message: `Phiếu ${transaction.transactionType === 'INCOME' ? 'thu' : 'chi'} #${transaction.transactionCode} đã được duyệt`,
                         type: 'success',
-                        unread: true
+                        unread: true,
+                        relatedId: transaction.id,
+                        targetPath: '/quan-ly-thu-chi'
                     }
                 });
             } catch (notifErr) {
@@ -351,7 +371,9 @@ router.put('/:id/reject', async (req: AuthRequest, res: Response) => {
                         userId: transaction.createdBy,
                         message: `Phiếu ${transaction.transactionType === 'INCOME' ? 'thu' : 'chi'} #${transaction.transactionCode} bị từ chối: ${reason}`,
                         type: 'error',
-                        unread: true
+                        unread: true,
+                        relatedId: transaction.id,
+                        targetPath: '/quan-ly-thu-chi'
                     }
                 });
             } catch (notifErr) {

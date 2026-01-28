@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, AlertCircle, CheckCircle, Copy, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import logoImage from '../assets/logo-bluebolt.png';
@@ -9,19 +9,36 @@ import logoImage from '../assets/logo-bluebolt.png';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const location = useLocation();
+  const { login, isAuthenticated, loading } = useAuth();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loadingForm, setLoadingForm] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      const from = (location.state as any)?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, loading, navigate, location]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#004aad]">
+        <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
+    setLoadingForm(true);
 
     try {
       const success = await login(username, password);
@@ -34,7 +51,7 @@ export function LoginPage() {
     } catch (err) {
       setError('Đã xảy ra lỗi khi đăng nhập. Vui lòng thử lại.');
     } finally {
-      setLoading(false);
+      setLoadingForm(false);
     }
   };
 
@@ -169,10 +186,10 @@ export function LoginPage() {
               {/* Login Button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loadingForm}
                 className="w-full bg-gradient-to-r from-[#004aad] to-[#155a9e] text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {loading ? (
+                {loadingForm ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     <span>Đang đăng nhập...</span>
