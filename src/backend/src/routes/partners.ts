@@ -32,7 +32,9 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 
         // Filter by BU if not Admin/CEO
         if (req.user?.role === 'Trưởng BU' && req.user.buId) {
-            where.businessUnitId = req.user.buId;
+            where.businessUnits = {
+                some: { id: req.user.buId }
+            };
         }
 
         const partners = await prisma.partner.findMany({
@@ -41,7 +43,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
                 bankAccounts: true,
                 contracts: true,
                 paymentMethod: true,
-                businessUnit: true
+                businessUnits: true
             } as any,
             orderBy: { partnerId: 'asc' }
         });
@@ -62,7 +64,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
                 bankAccounts: true,
                 contracts: true,
                 paymentMethod: true,
-                businessUnit: true
+                businessUnits: true
             } as any
         });
 
@@ -80,11 +82,10 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 // POST /api/partners
 router.post('/', async (req: AuthRequest, res: Response) => {
     try {
-        const { bankAccounts, contracts, businessUnit, paymentMethod, ...partnerData } = req.body as any;
+        const { bankAccounts, contracts, businessUnits, paymentMethod, businessUnitIds, ...partnerData } = req.body as any;
 
         // Sanitize relations and IDs
         if (partnerData.paymentMethodId === '') partnerData.paymentMethodId = null;
-        if (partnerData.businessUnitId === '') partnerData.businessUnitId = null;
 
         // Check for existing partnerId or taxCode
         const existing = await prisma.partner.findFirst({
@@ -105,27 +106,32 @@ router.post('/', async (req: AuthRequest, res: Response) => {
             }
         }
 
-        // Automatically assign BU for BU Leaders
-        const finalPartnerData: any = { ...partnerData };
+        // Assign BUs
+        let finalBusinessUnitIds = businessUnitIds || [];
         if (req.user?.role === 'Trưởng BU' && req.user.buId) {
-            finalPartnerData.businessUnitId = req.user.buId;
+            if (!finalBusinessUnitIds.includes(req.user.buId)) {
+                finalBusinessUnitIds.push(req.user.buId);
+            }
         }
 
         const partner = await prisma.partner.create({
             data: {
-                ...finalPartnerData,
+                ...partnerData,
                 bankAccounts: bankAccounts ? {
                     create: bankAccounts
                 } : undefined,
                 contracts: contracts ? {
                     create: contracts
+                } : undefined,
+                businessUnits: finalBusinessUnitIds.length > 0 ? {
+                    connect: finalBusinessUnitIds.map((id: string) => ({ id }))
                 } : undefined
             },
             include: {
                 bankAccounts: true,
                 contracts: true,
                 paymentMethod: true,
-                businessUnit: true
+                businessUnits: true
             } as any
         });
 
@@ -144,13 +150,12 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 // PUT /api/partners/:id
 router.put('/:id', async (req: AuthRequest, res: Response) => {
     try {
-        const { bankAccounts, contracts, businessUnit, paymentMethod, ...partnerData } = req.body as any;
+        const { bankAccounts, contracts, businessUnits, paymentMethod, businessUnitIds, ...partnerData } = req.body as any;
 
         const updateData: any = { ...partnerData };
 
         // Sanitize relations and IDs
         if (updateData.paymentMethodId === '') updateData.paymentMethodId = null;
-        if (updateData.businessUnitId === '') updateData.businessUnitId = null;
 
         if (bankAccounts) {
             updateData.bankAccounts = {
@@ -166,6 +171,12 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
             };
         }
 
+        if (businessUnitIds) {
+            updateData.businessUnits = {
+                set: businessUnitIds.map((id: string) => ({ id }))
+            };
+        }
+
         const partner = await prisma.partner.update({
             where: { id: req.params.id as string },
             data: updateData,
@@ -173,7 +184,7 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
                 bankAccounts: true,
                 contracts: true,
                 paymentMethod: true,
-                businessUnit: true
+                businessUnits: true
             } as any
         });
 
@@ -197,7 +208,7 @@ router.put('/:id/deactivate', async (req: AuthRequest, res: Response) => {
             include: {
                 bankAccounts: true,
                 contracts: true,
-                businessUnit: true
+                businessUnits: true
             } as any
         });
 

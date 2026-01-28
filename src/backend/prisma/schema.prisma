@@ -137,14 +137,13 @@ model Partner {
   representativeTitle String         @map("representative_title")
   representativePhone String         @map("representative_phone")
   paymentMethodId     String?        @map("payment_method_id")
-  businessUnitId      String?        @map("business_unit_id")
   paymentTerm         Int            @default(30) @map("payment_term")
   balance             Float          @default(0)
   createdAt           DateTime       @default(now()) @map("created_at")
   updatedAt           DateTime       @updatedAt @map("updated_at")
   bankAccounts        BankAccount[]
   contracts           Contract[]
-  businessUnit        BusinessUnit?  @relation(fields: [businessUnitId], references: [id])
+  businessUnits       BusinessUnit[]
   paymentMethod       PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
   transactions        Transaction[]
 

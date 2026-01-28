@@ -45,8 +45,8 @@ interface Partner {
   bankAccounts: BankAccount[];
   paymentMethodId: string | null;
   paymentMethod?: PaymentMethod;
-  businessUnitId?: string;
-  businessUnit?: { name: string };
+  businessUnitIds?: string[];
+  businessUnits?: { id: string, name: string }[];
   paymentTerm: number;
   contracts: Contract[];
   balance: number;
@@ -90,7 +90,7 @@ export function QuanLyDoiTac() {
     representativePhone: '',
     bankAccounts: [],
     paymentMethodId: '',
-    businessUnitId: '',
+    businessUnitIds: [],
     paymentTerm: 30,
     contracts: [],
     balance: 0,
@@ -229,7 +229,7 @@ export function QuanLyDoiTac() {
       representativePhone: '',
       bankAccounts: [],
       paymentMethodId: paymentMethods.length > 0 ? paymentMethods[0].id : '',
-      businessUnitId: currentUser.role === 'Trưởng BU' ? currentUser.buId || '' : '',
+      businessUnitIds: currentUser.role === 'Trưởng BU' ? (currentUser.buId ? [currentUser.buId] : []) : [],
       paymentTerm: 30,
       contracts: [],
       balance: 0,
@@ -240,14 +240,20 @@ export function QuanLyDoiTac() {
     setModalMode('view');
     setSelectedPartner(partner);
     setActiveTab('info');
-    setFormData({ ...partner });
+    setFormData({
+      ...partner,
+      businessUnitIds: partner.businessUnits?.map(bu => bu.id) || []
+    });
   };
 
   const handleEdit = (partner: Partner) => {
     setModalMode('edit');
     setSelectedPartner(partner);
     setActiveTab('info');
-    setFormData({ ...partner });
+    setFormData({
+      ...partner,
+      businessUnitIds: partner.businessUnits?.map(bu => bu.id) || []
+    });
   };
 
   const handleDeactivate = (partner: Partner) => {
@@ -288,14 +294,14 @@ export function QuanLyDoiTac() {
     }
 
     try {
-      const { businessUnit, paymentMethod, ...restOfFormData } = formData;
+      const { businessUnits, businessUnit, paymentMethod, ...restOfFormData } = formData as any;
       const payload = {
         ...restOfFormData,
         // Clean up unwanted fields if necessary, or just send partial
         bankAccounts: formData.bankAccounts?.map(({ id, ...rest }) => rest),
         contracts: formData.contracts?.map(({ id, ...rest }) => rest),
         paymentMethodId: formData.paymentMethodId || undefined,
-        businessUnitId: formData.businessUnitId || undefined,
+        businessUnitIds: formData.businessUnitIds || [],
       };
 
       if (modalMode === 'create') {
@@ -500,7 +506,11 @@ export function QuanLyDoiTac() {
                         {columns.filter(c => c.visible).map(column => {
                           if (column.id === 'partnerId') return <td key={column.id} className="px-6 py-4 font-bold text-gray-900">{partner.partnerId}</td>;
                           if (column.id === 'partnerName') return <td key={column.id} className="px-6 py-4 font-medium text-gray-900">{partner.partnerName}</td>;
-                          if (column.id === 'businessUnit') return <td key={column.id} className="px-6 py-4 text-sm text-gray-600">{partner.businessUnit?.name || '-'}</td>;
+                          if (column.id === 'businessUnit') return <td key={column.id} className="px-6 py-4 text-sm text-gray-600">
+                            {partner.businessUnits && partner.businessUnits.length > 0
+                              ? partner.businessUnits.map(bu => bu.name).join(', ')
+                              : '-'}
+                          </td>;
                           if (column.id === 'partnerType') return <td key={column.id} className="px-6 py-4"><span className={`px-3 py-1 rounded-full text-xs font-semibold ${getPartnerTypeBadgeColor(partner.partnerType)}`}>{getPartnerTypeLabel(partner.partnerType)}</span></td>;
                           if (column.id === 'taxCode') return <td key={column.id} className="px-6 py-4 text-sm text-gray-600">{partner.taxCode}</td>;
                           if (column.id === 'phone') return <td key={column.id} className="px-6 py-4 text-sm text-gray-600">{partner.phone}</td>;
@@ -742,18 +752,30 @@ export function QuanLyDoiTac() {
                             <Building2 className="w-4 h-4 text-gray-500" />
                             <span className="text-red-500">*</span> BU Phụ Trách
                           </label>
-                          <select
-                            value={formData.businessUnitId || ''}
-                            onChange={(e) => setFormData({ ...formData, businessUnitId: e.target.value })}
-                            disabled={isReadOnly || currentUser.role === 'Trưởng BU'}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#004aad] focus:border-transparent focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500"
-                            required
-                          >
-                            <option value="">Chọn Business Unit</option>
+                          <div className={`grid grid-cols-2 gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50 ${isReadOnly ? 'opacity-75' : ''}`}>
                             {availableBUs.filter(bu => bu.id !== 'all').map(bu => (
-                              <option key={bu.id} value={bu.id}>{bu.name}</option>
+                              <label key={bu.id} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1 rounded transition-colors">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.businessUnitIds?.includes(bu.id) || false}
+                                  onChange={(e) => {
+                                    const currentIds = formData.businessUnitIds || [];
+                                    if (e.target.checked) {
+                                      setFormData({ ...formData, businessUnitIds: [...currentIds, bu.id] });
+                                    } else {
+                                      setFormData({ ...formData, businessUnitIds: currentIds.filter(id => id !== bu.id) });
+                                    }
+                                  }}
+                                  disabled={isReadOnly || (currentUser.role === 'Trưởng BU' && bu.id === currentUser.buId)}
+                                  className="w-4 h-4 text-[#004aad] rounded focus:ring-[#004aad]"
+                                />
+                                <span className="text-sm text-gray-700">{bu.name}</span>
+                              </label>
                             ))}
-                          </select>
+                          </div>
+                          {(!formData.businessUnitIds || formData.businessUnitIds.length === 0) && (
+                            <p className="text-xs text-red-500 mt-1">Vui lòng chọn ít nhất một BU</p>
+                          )}
                         </div>
                         <div className="col-span-2">
                           <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
