@@ -74,7 +74,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
                 attachments: true,
                 allocationPreviews: true
             },
-            orderBy: { transactionDate: 'desc' }
+            orderBy: { transactionCode: 'asc' }
         });
 
         res.json(transactions);
@@ -244,10 +244,35 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 // PUT /api/transactions/:id
 router.put('/:id', async (req: AuthRequest, res: Response) => {
     try {
-        const { attachments, allocationPreviews, ...txnData } = req.body;
+        const id = req.params.id as string;
+        const currentTxn = await prisma.transaction.findUnique({
+            where: { id }
+        });
+
+        if (!currentTxn) {
+            return res.status(404).json({ error: 'Transaction not found' });
+        }
+
+        if (currentTxn.approvalStatus === 'APPROVED') {
+            return res.status(400).json({ error: 'Cannot edit an approved transaction' });
+        }
+
+        const {
+            attachments,
+            allocationPreviews,
+            // Exclude relation objects that might be present in the body
+            category,
+            project,
+            partner,
+            employee,
+            businessUnit,
+            paymentMethod,
+            allocationRule,
+            ...txnData
+        } = req.body;
 
         const transaction = await prisma.transaction.update({
-            where: { id: req.params.id as string },
+            where: { id },
             data: {
                 ...txnData,
                 attachments: attachments ? {
@@ -277,8 +302,21 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
 // DELETE /api/transactions/:id
 router.delete('/:id', async (req: AuthRequest, res: Response) => {
     try {
+        const id = req.params.id as string;
+        const currentTxn = await prisma.transaction.findUnique({
+            where: { id }
+        });
+
+        if (!currentTxn) {
+            return res.status(404).json({ error: 'Transaction not found' });
+        }
+
+        if (currentTxn.approvalStatus === 'APPROVED') {
+            return res.status(400).json({ error: 'Cannot delete an approved transaction' });
+        }
+
         await prisma.transaction.delete({
-            where: { id: req.params.id as string }
+            where: { id }
         });
 
         res.json({ message: 'Transaction deleted successfully' });

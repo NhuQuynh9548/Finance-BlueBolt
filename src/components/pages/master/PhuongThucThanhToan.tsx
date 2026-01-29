@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, CreditCard, X, AlertCircle, RefreshCw } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, CreditCard, X, AlertCircle, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { paymentMethodService } from '../../../services/paymentMethodService';
 
 interface PaymentMethod {
@@ -55,6 +55,19 @@ export function PhuongThucThanhToan() {
 
     return matchesSearch && matchesStatus;
   });
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+  const totalPages = Math.ceil(filteredMethods.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedMethods = filteredMethods.slice(startIndex, endIndex);
+
+  // Reset to first page when search/filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus]);
 
   const handleAdd = () => {
     setEditingMethod(null);
@@ -182,7 +195,7 @@ export function PhuongThucThanhToan() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredMethods.map((method) => (
+                {paginatedMethods.map((method) => (
                   <tr key={method.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="font-mono font-semibold text-[#004aad]">{method.code}</span>
@@ -228,6 +241,45 @@ export function PhuongThucThanhToan() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Hiển thị <span className="font-semibold">{startIndex + 1}</span> - <span className="font-semibold">{Math.min(endIndex, filteredMethods.length)}</span> trong tổng số <span className="font-semibold">{filteredMethods.length}</span> phương thức
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium ${currentPage === page
+                      ? 'bg-[#004aad] text-white'
+                      : 'border border-gray-300 hover:bg-gray-50'
+                      }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )}
 
           {filteredMethods.length === 0 && (
             <div className="text-center py-12">

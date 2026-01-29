@@ -200,7 +200,31 @@ export function Dashboard() {
     }
   ];
 
-  const DONUT_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+  // Centralized Category Color Mapping - Used for all charts
+  const CATEGORY_COLORS: { [key: string]: string } = {
+    'Dịch vụ thuê ngoài': '#3B82F6',        // Blue
+    'Lương, thưởng, phụ cấp': '#F59E0B',    // Amber/Orange
+    'Chi phí văn phòng': '#10B981',         // Green
+    'Dịch vụ tư vấn, kế toán': '#8B5CF6',   // Purple
+    'Công cụ, thiết bị': '#EF4444',         // Red
+    'Thuế và lệ phí': '#6366F1',            // Indigo
+    'Bảo hiểm xã hội': '#06B6D4',           // Cyan
+    'Chi phí khác': '#F97316',              // Orange
+    'Chi phí hỗ trợ': '#EC4899',            // Pink
+    'Chi phí marketing': '#14B8A6',         // Teal
+  };
+
+  // Fallback colors for categories not in the mapping
+  const FALLBACK_COLORS = [
+    '#3B82F6', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444',
+    '#6366F1', '#06B6D4', '#F97316', '#EC4899', '#14B8A6',
+    '#84CC16', '#F43F5E', '#0EA5E9', '#A855F7', '#22D3EE'
+  ];
+
+  // Helper function to get color for a category
+  const getCategoryColor = (categoryName: string, index: number): string => {
+    return CATEGORY_COLORS[categoryName] || FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+  };
 
 
   // Get time range display text
@@ -467,7 +491,7 @@ export function Dashboard() {
                     label={renderCustomLabel}
                   >
                     {expenseData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={DONUT_COLORS[index % DONUT_COLORS.length]} />
+                      <Cell key={`cell-${index}`} fill={getCategoryColor(entry.name, index)} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -489,7 +513,7 @@ export function Dashboard() {
                     <div className="flex items-center gap-2">
                       <div
                         className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: DONUT_COLORS[index] }}
+                        style={{ backgroundColor: getCategoryColor(category.name, index) }}
                       ></div>
                       <span className="text-gray-700">{category.name}</span>
                     </div>
@@ -615,35 +639,14 @@ export function Dashboard() {
 
       {/* BU Detail Modal */}
       {showDetailModal && selectedBUData && (() => {
-        // Prepare chart data from modalCategories
-        const categoryColors: { [key: string]: string } = {
-          'Dịch vụ thuê ngoài': '#3B82F6',        // Blue
-          'Lương, thưởng, phụ cấp': '#F59E0B',    // Amber/Orange
-          'Chi phí vận phòng': '#10B981',         // Green
-          'Dịch vụ tư vấn, kế toán': '#8B5CF6',   // Purple
-          'Công cụ, thiết bị': '#EF4444',         // Red
-          'Thuế và lệ phí': '#6366F1',            // Indigo
-          'Bảo hiểm xã hội': '#06B6D4',           // Cyan
-          'Chi phí khác': '#F97316',              // Orange
-          'Chi phí hỗ trợ': '#EC4899',            // Pink
-          'Chi phí marketing': '#14B8A6',         // Teal
-        };
-
-
-        // Tạo màu tự động nếu danh mục chưa có trong danh sách
-        const autoColors = [
-          '#3B82F6', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444',
-          '#6366F1', '#06B6D4', '#F97316', '#EC4899', '#14B8A6',
-          '#84CC16', '#F43F5E', '#0EA5E9', '#A855F7', '#22D3EE'
-        ];
-
+        // Prepare chart data from modalCategories using centralized color function
         const chartData = modalCategories
           .filter((item: any) => item.value > 0)
           .map((item: any, index: number) => ({
             name: item.name.split(' - ')[0],
             value: item.value,
             fullName: item.name,
-            color: categoryColors[item.name] || autoColors[index % autoColors.length]
+            color: getCategoryColor(item.name, index)
           }));
 
         // Custom label for pie chart
@@ -726,7 +729,7 @@ export function Dashboard() {
                     </div>
                     <div className="p-4">
                       {modalCategories.map((item: any, index: number) => {
-                        const color = categoryColors[item.name] || autoColors[index % autoColors.length];
+                        const color = getCategoryColor(item.name, index);
                         return (
                           <div key={index} className="flex justify-between items-start py-2 border-b border-gray-100 last:border-0">
                             <div className="flex items-start gap-2 flex-1">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, Award, X, AlertCircle, RefreshCw, Eye } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Award, X, AlertCircle, RefreshCw, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { employeeLevelService } from '../../../services/employeeLevelService';
 
 interface Level {
@@ -67,6 +67,19 @@ export function CapBacNhanSu() {
 
     return matchesSearch;
   });
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+  const totalPages = Math.ceil(filteredLevels.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedLevels = filteredLevels.slice(startIndex, endIndex);
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const handleAdd = () => {
     setEditingLevel(null);
@@ -191,7 +204,7 @@ export function CapBacNhanSu() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredLevels.map((level) => (
+                {paginatedLevels.map((level) => (
                   <tr key={level.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="font-mono font-semibold text-[#004aad]">{level.code}</span>
@@ -235,6 +248,45 @@ export function CapBacNhanSu() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Hiển thị <span className="font-semibold">{startIndex + 1}</span> - <span className="font-semibold">{Math.min(endIndex, filteredLevels.length)}</span> trong tổng số <span className="font-semibold">{filteredLevels.length}</span> cấp bậc
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium ${currentPage === page
+                      ? 'bg-[#004aad] text-white'
+                      : 'border border-gray-300 hover:bg-gray-50'
+                      }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )}
           {filteredLevels.length === 0 && (
             <div className="text-center py-12">
               <Award className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -379,51 +431,53 @@ export function CapBacNhanSu() {
         )
       }
       {/* View Details Modal */}
-      {viewingLevel && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-            <div className="border-b border-gray-200 px-6 py-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-800">Chi Tiết Cấp Bậc</h2>
+      {
+        viewingLevel && (
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+              <div className="border-b border-gray-200 px-6 py-5">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-800">Chi Tiết Cấp Bậc</h2>
+                  </div>
+                  <button
+                    onClick={() => setViewingLevel(null)}
+                    className="p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">Mã Cấp Bậc</label>
+                  <div className="text-gray-900 font-medium bg-gray-50 p-3 rounded-lg border border-gray-100">{viewingLevel.code}</div>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">Tên Cấp Bậc</label>
+                  <div className="text-gray-900 font-medium bg-gray-50 p-3 rounded-lg border border-gray-100">{viewingLevel.name}</div>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">Mô Tả</label>
+                  <div className="text-gray-900 bg-gray-50 p-3 rounded-lg border border-gray-100 whitespace-pre-wrap">
+                    {viewingLevel.description || <span className="text-gray-400 italic">Không có mô tả</span>}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 px-6 py-4 flex justify-end">
                 <button
                   onClick={() => setViewingLevel(null)}
-                  className="p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
+                  className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
                 >
-                  <X className="w-5 h-5" />
+                  Đóng
                 </button>
               </div>
             </div>
-
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">Mã Cấp Bậc</label>
-                <div className="text-gray-900 font-medium bg-gray-50 p-3 rounded-lg border border-gray-100">{viewingLevel.code}</div>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">Tên Cấp Bậc</label>
-                <div className="text-gray-900 font-medium bg-gray-50 p-3 rounded-lg border border-gray-100">{viewingLevel.name}</div>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">Mô Tả</label>
-                <div className="text-gray-900 bg-gray-50 p-3 rounded-lg border border-gray-100 whitespace-pre-wrap">
-                  {viewingLevel.description || <span className="text-gray-400 italic">Không có mô tả</span>}
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 px-6 py-4 flex justify-end">
-              <button
-                onClick={() => setViewingLevel(null)}
-                className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-              >
-                Đóng
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )
+      }
     </div >
   );
 }

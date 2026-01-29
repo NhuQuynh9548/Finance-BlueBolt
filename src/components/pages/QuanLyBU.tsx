@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Plus, Search, Edit, Trash2, Filter, X, RotateCcw, AlertCircle, Eye } from 'lucide-react';
+import { Building2, Plus, Search, Edit, Trash2, Filter, X, RotateCcw, AlertCircle, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDraggableColumns, DraggableColumnHeader, ColumnConfig } from '../hooks/useDraggableColumns';
 import { businessUnitService } from '../../services/businessUnitService';
 import { useApp } from '../../contexts/AppContext';
@@ -92,6 +92,19 @@ export function QuanLyBU() {
 
     return matchSearch && matchStatus;
   });
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+  const totalPages = Math.ceil(filteredBUs.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedBUs = filteredBUs.slice(startIndex, endIndex);
+
+  // Reset to first page when search/filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
 
   // Handle Create
   const handleCreate = () => {
@@ -387,7 +400,7 @@ export function QuanLyBU() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredBUs.map((bu) => (
+                  {paginatedBUs.map((bu) => (
                     <tr key={bu.id} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
                       {columns.filter(c => c.visible).map((column) => renderCell(column, bu))}
                     </tr>
@@ -400,6 +413,45 @@ export function QuanLyBU() {
               <div className="text-center py-12">
                 <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500">Không tìm thấy Business Unit nào</p>
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between bg-white">
+                <div className="text-sm text-gray-600">
+                  Hiển thị <span className="font-semibold">{startIndex + 1}</span> - <span className="font-semibold">{Math.min(endIndex, filteredBUs.length)}</span> trong tổng số <span className="font-semibold">{filteredBUs.length}</span> Business Unit
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium ${currentPage === page
+                        ? 'bg-[#004aad] text-white'
+                        : 'border border-gray-300 hover:bg-gray-50'
+                        }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             )}
           </div>

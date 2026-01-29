@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, UserCog, X, AlertCircle, RefreshCw } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, UserCog, X, AlertCircle, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { specializationService } from '../../../services/specializationService';
 
 interface Role {
@@ -53,6 +53,19 @@ export function ChuyenMonVaiTro() {
 
     return matchesSearch;
   });
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+  const totalPages = Math.ceil(filteredRoles.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedRoles = filteredRoles.slice(startIndex, endIndex);
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const handleAdd = () => {
     setEditingRole(null);
@@ -172,7 +185,7 @@ export function ChuyenMonVaiTro() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredRoles.map((role) => (
+                {paginatedRoles.map((role) => (
                   <tr key={role.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="font-mono font-semibold text-[#004aad]">{role.code}</span>
@@ -209,6 +222,45 @@ export function ChuyenMonVaiTro() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Hiển thị <span className="font-semibold">{startIndex + 1}</span> - <span className="font-semibold">{Math.min(endIndex, filteredRoles.length)}</span> trong tổng số <span className="font-semibold">{filteredRoles.length}</span> vai trò
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium ${currentPage === page
+                      ? 'bg-[#004aad] text-white'
+                      : 'border border-gray-300 hover:bg-gray-50'
+                      }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )}
 
           {filteredRoles.length === 0 && (
             <div className="text-center py-12">

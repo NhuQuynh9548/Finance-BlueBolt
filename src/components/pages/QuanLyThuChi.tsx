@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, Plus, Eye, Edit2, Trash2, DollarSign, X, AlertCircle, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Save, Calendar, Building2, FileText, Paperclip, TrendingUp, TrendingDown, RefreshCw, ChevronDown, ChevronUp, User, Users, Upload, Printer, Send, CheckCircle, XCircle, Image as ImageIcon, ExternalLink, Briefcase, RotateCcw, Settings, GripVertical, Layers } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
@@ -126,10 +126,12 @@ export function QuanLyThuChi() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Sorting & Pagination
-  const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortOrder, setSortOrder] = useState<SortOrder>(null);
+  const [sortField, setSortField] = useState<SortField | null>('transactionCode');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 15;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
 
   // Columns
   const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
@@ -180,6 +182,10 @@ export function QuanLyThuChi() {
     return new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
   };
 
+  const formatNumber = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN').format(amount);
+  };
+
   // Fetch Data
   const fetchData = useCallback(async () => {
     try {
@@ -188,11 +194,11 @@ export function QuanLyThuChi() {
 
       // Prepare filters for API
       const apiFilters: any = {};
-      if (selectedBU !== 'all') apiFilters.buId = selectedBU;
+      // Use filterBU for local filtering (not selectedBU from global context)
+      if (filterBU !== 'all') apiFilters.buId = filterBU;
       if (filterType !== 'all') apiFilters.type = filterType;
       if (filterStatus !== 'all') apiFilters.status = filterStatus;
-      // Date filters would go here if API supports dateFrom/dateTo directly or we handle in client
-      // The backend supports dateFrom and dateTo, let's calculate them
+      // Date filters
       const range = getTransactionRange(timeRange);
       if (range) {
         apiFilters.dateFrom = range.start.toISOString();
@@ -225,7 +231,7 @@ export function QuanLyThuChi() {
     } finally {
       setLoading(false);
     }
-  }, [selectedBU, filterType, filterStatus, timeRange, customStartDate, customEndDate]);
+  }, [filterBU, filterType, filterStatus, timeRange, customStartDate, customEndDate]);
 
   useEffect(() => {
     fetchData();
@@ -283,14 +289,19 @@ export function QuanLyThuChi() {
         break;
       case 'CUSTOM':
         if (customStartDate && customEndDate) {
+          const customStart = new Date(customStartDate);
+          const customEnd = new Date(customEndDate);
+          customStart.setHours(0, 0, 0, 0);
+          customEnd.setHours(23, 59, 59, 999);
           return {
-            start: new Date(customStartDate),
-            end: new Date(customEndDate)
+            start: customStart,
+            end: customEnd
           };
         }
-        return null;
-      case 'ALL':
-        return null; // No date filter
+        // If custom dates not set, default to current month
+        start.setDate(1);
+        end.setMonth(now.getMonth() + 1, 0);
+        break;
       default:
         return null;
     }
@@ -310,8 +321,23 @@ export function QuanLyThuChi() {
     return matchCode || matchDesc || matchPartner || matchEmployee;
   });
 
-  // Sorting
+  // Sorting - Flexible based on filter type
   const sortedTransactions = [...filteredTransactions].sort((a, b) => {
+    // When viewing "Tất cả", sort by newest first (transactionDate descending)
+    if (filterType === 'all') {
+      const dateA = new Date(a.transactionDate).getTime();
+      const dateB = new Date(b.transactionDate).getTime();
+      return dateB - dateA; // Newest first
+    }
+
+    // When filtering by INCOME, EXPENSE, or LOAN, sort by transactionCode ascending
+    if (filterType === 'INCOME' || filterType === 'EXPENSE' || filterType === 'LOAN') {
+      const codeA = a.transactionCode || '';
+      const codeB = b.transactionCode || '';
+      return codeA.localeCompare(codeB); // Ascending order
+    }
+
+    // Fallback to manual sorting if sortField and sortOrder are set
     if (!sortField || !sortOrder) return 0;
 
     let valA: any = a[sortField];
@@ -697,7 +723,7 @@ export function QuanLyThuChi() {
                     { label: 'Tháng này', value: 'MONTH' },
                     { label: 'Quý này', value: 'QUARTER' },
                     { label: 'Năm này', value: 'YEAR' },
-                    { label: 'Tất cả', value: 'ALL' }
+                    { label: 'Tùy chỉnh', value: 'CUSTOM' }
                   ].map((p) => (
                     <button
                       key={p.value}
@@ -733,13 +759,51 @@ export function QuanLyThuChi() {
                   <option value="REJECTED">Từ chối</option>
                 </select>
                 <button
-                  onClick={() => { setSearchTerm(''); setFilterStatus('all'); setFilterType('all'); setFilterBU('all'); }}
+                  onClick={() => {
+                    setSearchTerm('');
+                    setFilterStatus('all');
+                    setFilterType('all');
+                    setFilterBU('all');
+                    setTimeRange('MONTH');
+                    setCustomStartDate('');
+                    setCustomEndDate('');
+                  }}
                   className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-500"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
+
+            {/* Custom Date Range Picker - Show when CUSTOM is selected */}
+            {timeRange === 'CUSTOM' && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-gray-700">Chọn khoảng thời gian:</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600">Từ ngày:</label>
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      onChange={e => setCustomStartDate(e.target.value)}
+                      className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600">Đến ngày:</label>
+                    <input
+                      type="date"
+                      value={customEndDate}
+                      onChange={e => setCustomEndDate(e.target.value)}
+                      className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Action Buttons Row */}
             <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100">
@@ -864,11 +928,13 @@ export function QuanLyThuChi() {
                         <td className="px-6 py-4 text-center">
                           <div className="flex justify-center gap-2">
                             <button onClick={() => handleView(txn)} className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors" title="Xem chi tiết"><Eye className="w-4 h-4" /></button>
-                            {(txn.approvalStatus === 'DRAFT' || txn.approvalStatus === 'REJECTED') ? (
+                            {(txn.approvalStatus === 'DRAFT' || txn.approvalStatus === 'REJECTED' || txn.approvalStatus === 'PENDING') ? (
                               <>
                                 <button onClick={() => handleEdit(txn)} className="p-1.5 hover:bg-orange-50 text-orange-600 rounded-lg transition-colors" title="Chỉnh sửa"><Edit2 className="w-4 h-4" /></button>
                                 <button onClick={() => handleDelete(txn.id)} className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors" title="Xóa"><Trash2 className="w-4 h-4" /></button>
-                                <button onClick={() => handleCancel(txn.id)} className="p-1.5 hover:bg-gray-100 text-gray-500 rounded-lg transition-colors" title="Hủy"><XCircle className="w-4 h-4" /></button>
+                                {txn.approvalStatus !== 'PENDING' && (
+                                  <button onClick={() => handleCancel(txn.id)} className="p-1.5 hover:bg-gray-100 text-gray-500 rounded-lg transition-colors" title="Hủy"><XCircle className="w-4 h-4" /></button>
+                                )}
                               </>
                             ) : txn.approvalStatus !== 'APPROVED' ? (
                               <button disabled className="p-1.5 text-gray-300 cursor-not-allowed"><Edit2 className="w-4 h-4" /></button>
@@ -891,6 +957,47 @@ export function QuanLyThuChi() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between bg-white rounded-b-xl">
+            <div className="text-sm text-gray-600">
+              Hiển thị <span className="font-semibold">{startIndex + 1}</span> - <span className="font-semibold">{Math.min(endIndex, sortedTransactions.length)}</span> trong tổng số <span className="font-semibold">{sortedTransactions.length}</span> giao dịch
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Trang trước"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium ${currentPage === page
+                    ? 'bg-[#004aad] text-white'
+                    : 'border border-gray-300 hover:bg-gray-50'
+                    }`}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Trang sau"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -1088,27 +1195,25 @@ export function QuanLyThuChi() {
                           <span className={`text-sm font-semibold ${formData.objectType === 'STUDENT' ? 'text-gray-900' : 'text-gray-500'}`}>Học viên</span>
                         </label>
                       )}
-                      {modalType === 'LOAN' && (
-                        <label className="flex-shrink-0 flex items-center cursor-pointer gap-2 group whitespace-nowrap mr-10">
-                          <input
-                            type="radio"
-                            name="objectType"
-                            checked={formData.objectType === 'OTHER'}
-                            onChange={() => setFormData({ ...formData, objectType: 'OTHER' })}
-                            disabled={modalMode === 'view'}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                          />
-                          <span className={`text-sm font-semibold ${formData.objectType === 'OTHER' ? 'text-gray-900' : 'text-gray-500'}`}>Khác</span>
-                        </label>
-                      )}
+                      <label className="flex-shrink-0 flex items-center cursor-pointer gap-2 group whitespace-nowrap mr-10">
+                        <input
+                          type="radio"
+                          name="objectType"
+                          checked={formData.objectType === 'OTHER'}
+                          onChange={() => setFormData({ ...formData, objectType: 'OTHER' })}
+                          disabled={modalMode === 'view'}
+                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className={`text-sm font-semibold ${formData.objectType === 'OTHER' ? 'text-gray-900' : 'text-gray-500'}`}>Khác</span>
+                      </label>
                     </div>
                     <div>
                       <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
                         <span className="text-red-500 font-bold">*</span> {
                           formData.objectType === 'PARTNER' ? 'Đối tác' :
                             formData.objectType === 'EMPLOYEE' ? 'Nhân viên' :
-                              (modalType === 'LOAN' && formData.objectType === 'OTHER') ? 'Đối tượng vay khác' :
-                                'Học viên'
+                              formData.objectType === 'STUDENT' ? 'Học viên' :
+                                'Đối tượng khác'
                         }
                       </label>
                       <div className="relative">
@@ -1117,8 +1222,8 @@ export function QuanLyThuChi() {
                             type="text"
                             required
                             disabled={modalMode === 'view'}
-                            placeholder={formData.objectType === 'STUDENT' ? "Nhập tên học viên..." : "Nhập người vay/cho vay..."}
-                            value={(formData.objectType === 'STUDENT' ? formData.studentName : formData.otherName) || ''}
+                            placeholder={formData.objectType === 'STUDENT' ? "Nhập tên học viên..." : "Nhập tên đối tượng..."}
+                            鼓 value={(formData.objectType === 'STUDENT' ? formData.studentName : formData.otherName) || ''}
                             onChange={e => setFormData({ ...formData, [formData.objectType === 'STUDENT' ? 'studentName' : 'otherName']: e.target.value })}
                             className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                           />
@@ -1213,22 +1318,25 @@ export function QuanLyThuChi() {
                     <label className="block text-[13px] font-semibold text-gray-600 mb-1.5">
                       <span className="text-gray-400 font-bold mr-1">$</span> <span className="text-red-500 font-bold">*</span> Số Tiền (VND)
                     </label>
-                    <div className="space-y-1">
+                    <div className="relative">
                       <input
                         type="text"
                         required
                         disabled={modalMode === 'view'}
-                        value={formData.amount !== undefined ? formatCurrency(formData.amount) : ''}
+                        value={formData.amount !== undefined ? formatNumber(formData.amount) : ''}
                         onChange={e => {
                           const rawValue = e.target.value.replace(/\./g, '').replace(/[^0-9]/g, '');
                           const numValue = rawValue ? parseInt(rawValue, 10) : 0;
                           setFormData({ ...formData, amount: numValue });
                         }}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg font-bold text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        className="w-full pl-4 pr-10 py-2 border border-gray-200 rounded-lg font-bold text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                         placeholder="0"
                       />
-                      <p className="text-[12px] italic text-gray-500">Số tiền gốc: {formData.amount || 0}</p>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">
+                        đ
+                      </div>
                     </div>
+                    <p className="text-[12px] italic text-gray-500 mt-1">Số tiền gốc: {formData.amount || 0}</p>
                   </div>
                 </div>
                 {/* SECTION 4: HỢP ĐỒNG ĐÍNH KÈM */}
