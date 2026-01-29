@@ -233,6 +233,11 @@ export function QuanLyThuChi() {
     }
   }, [filterBU, filterType, filterStatus, timeRange, customStartDate, customEndDate]);
 
+  // Sync filterBU with selectedBU from global context (header)
+  useEffect(() => {
+    setFilterBU(selectedBU);
+  }, [selectedBU]);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);

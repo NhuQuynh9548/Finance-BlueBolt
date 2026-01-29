@@ -61,7 +61,7 @@ export function QuanLyDoiTac() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { currentUser, availableBUs } = useApp();
+  const { currentUser, availableBUs, selectedBU } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -164,7 +164,11 @@ export function QuanLyDoiTac() {
 
     const matchesType = filterType === 'all' || partner.partnerType === filterType || (filterType === 'both' && partner.partnerType === 'BOTH');
 
-    return matchesSearch && matchesType;
+    // Filter by BU from global header
+    const matchesBU = selectedBU === 'all' ||
+      (partner.businessUnits && partner.businessUnits.some(bu => bu.id === selectedBU));
+
+    return matchesSearch && matchesType && matchesBU;
   });
 
   // Sorting logic
