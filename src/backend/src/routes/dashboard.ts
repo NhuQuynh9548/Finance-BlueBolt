@@ -63,7 +63,6 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
 
         // Build Where Clause
         let where: any = {
-            approvalStatus: 'APPROVED',
             ...buildDateFilter(startDate, endDate)
         };
 
@@ -137,7 +136,6 @@ router.get('/revenue-chart', async (req: AuthRequest, res: Response) => {
         }
 
         let where: any = {
-            approvalStatus: 'APPROVED',
             ...buildDateFilter(startDate, endDate)
         };
 
@@ -274,7 +272,6 @@ router.get('/expense-chart', async (req: AuthRequest, res: Response) => {
         }
 
         let where: any = {
-            approvalStatus: 'APPROVED',
             transactionType: 'EXPENSE',
             ...buildDateFilter(startDate, endDate)
         };
@@ -363,7 +360,6 @@ router.get('/bu-stats', async (req: AuthRequest, res: Response) => {
         // Ideally we would filter by date range here too
         const transactions = await prisma.transaction.findMany({
             where: {
-                approvalStatus: 'APPROVED',
                 ...buildDateFilter(startDate, endDate)
             },
             include: { allocationPreviews: true }

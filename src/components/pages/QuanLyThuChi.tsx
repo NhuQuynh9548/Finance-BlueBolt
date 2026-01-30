@@ -94,7 +94,8 @@ export function QuanLyThuChi() {
   const navigate = useNavigate();
 
   // States
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]); // Filtered transactions for display
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]); // All transactions for KPI stats
   const [categories, setCategories] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
@@ -136,6 +137,8 @@ export function QuanLyThuChi() {
   // Columns
   const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
   const [showFilters, setShowFilters] = useState(true);
+  const [highlightedTxnId, setHighlightedTxnId] = useState<string | null>(null);
+  const tableRef = React.useRef<HTMLTableElement>(null);
 
   // Load columns from localStorage on mount
   useEffect(() => {
@@ -192,7 +195,7 @@ export function QuanLyThuChi() {
       setLoading(true);
       setError(null);
 
-      // Prepare filters for API
+      // Prepare filters for API (for filtered transactions)
       const apiFilters: any = {};
       // Use filterBU for local filtering (not selectedBU from global context)
       if (filterBU !== 'all') apiFilters.buId = filterBU;
@@ -205,8 +208,17 @@ export function QuanLyThuChi() {
         apiFilters.dateTo = range.end.toISOString();
       }
 
-      const [txns, cats, prjs, pts, emps, bus, pms, rules] = await Promise.all([
-        transactionService.getAll(apiFilters),
+      // Prepare filters for ALL transactions (for KPI stats - only BU and date filters)
+      const allApiFilters: any = {};
+      if (filterBU !== 'all') allApiFilters.buId = filterBU;
+      if (range) {
+        allApiFilters.dateFrom = range.start.toISOString();
+        allApiFilters.dateTo = range.end.toISOString();
+      }
+
+      const [txns, allTxns, cats, prjs, pts, emps, bus, pms, rules] = await Promise.all([
+        transactionService.getAll(apiFilters), // Filtered transactions
+        transactionService.getAll(allApiFilters), // All transactions for KPI
         categoryService.getAll(),
         projectService.getAll(),
         partnerService.getAll(),
@@ -217,6 +229,7 @@ export function QuanLyThuChi() {
       ]);
 
       setTransactions(txns);
+      setAllTransactions(allTxns); // Store all transactions for KPI calculation
       setCategories(cats);
       setProjects(prjs);
       setPartners(pts);
@@ -242,21 +255,112 @@ export function QuanLyThuChi() {
     fetchData();
   }, [fetchData]);
 
-  // Handle direct link to a transaction from notification
+  // Handle direct link to a transaction from notification - Highlight instead of modal
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const txnId = params.get('id');
+    const highlightId = params.get('highlight');
 
-    if (txnId && !loading && transactions.length > 0) {
-      const txn = transactions.find(t => t.id === txnId);
-      if (txn) {
-        handleView(txn);
-        // Clean up URL to prevent re-opening on next render
-        // We use { replace: true } to not clutter history
-        navigate(location.pathname, { replace: true });
+    if (highlightId && !loading) {
+      // First, try to find in current transactions
+      let txn = transactions.find(t => t.id === highlightId);
+
+      // If not found in filtered list, try to find in all transactions
+      if (!txn && allTransactions.length > 0) {
+        txn = allTransactions.find(t => t.id === highlightId);
+
+        // If found in allTransactions but not in filtered transactions,
+        // we need to adjust filters to show it
+        if (txn) {
+          // Adjust filters to show this transaction
+          setFilterType(txn.transactionType);
+          setFilterStatus('all'); // Show all statuses
+          // Keep current BU filter or set to transaction's BU
+          if (filterBU !== 'all' && filterBU !== txn.businessUnitId) {
+            setFilterBU(txn.businessUnitId);
+          }
+
+          // Wait for filters to update and data to reload
+          // The highlight will be applied in the next render after fetchData completes
+          setTimeout(() => {
+            setHighlightedTxnId(highlightId);
+
+            // Scroll after a delay to ensure the row is rendered
+            setTimeout(() => {
+              const rowElement = document.getElementById(`txn-row-${highlightId}`);
+              if (rowElement) {
+                rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }, 500);
+
+            // Remove highlight after animation completes (5 seconds)
+            setTimeout(() => {
+              setHighlightedTxnId(null);
+            }, 5500);
+          }, 100);
+        }
+      } else if (txn) {
+        // Transaction is already in the filtered list
+        // Now we need to find which page it's on
+        // We need to recalculate the sorted list to find the transaction's position
+
+        // Apply the same filtering and sorting logic
+        const filtered = transactions.filter(t => {
+          const searchLower = debouncedSearch.toLowerCase();
+          const matchCode = t.transactionCode?.toLowerCase().includes(searchLower);
+          const matchDesc = t.description?.toLowerCase().includes(searchLower);
+          const matchPartner = t.partner?.partnerName?.toLowerCase().includes(searchLower);
+          const matchEmployee = t.employee?.fullName?.toLowerCase().includes(searchLower);
+          return matchCode || matchDesc || matchPartner || matchEmployee;
+        });
+
+        const sorted = [...filtered].sort((a, b) => {
+          if (filterType === 'all') {
+            const dateA = new Date(a.transactionDate).getTime();
+            const dateB = new Date(b.transactionDate).getTime();
+            return dateB - dateA;
+          }
+          if (filterType === 'INCOME' || filterType === 'EXPENSE' || filterType === 'LOAN') {
+            const codeA = a.transactionCode || '';
+            const codeB = b.transactionCode || '';
+            return codeA.localeCompare(codeB);
+          }
+          return 0;
+        });
+
+        // Find the index of the transaction in the sorted list
+        const txnIndex = sorted.findIndex(t => t.id === highlightId);
+
+        if (txnIndex !== -1) {
+          // Calculate which page the transaction is on
+          const pageNumber = Math.floor(txnIndex / itemsPerPage) + 1;
+
+          // Navigate to that page
+          if (pageNumber !== currentPage) {
+            setCurrentPage(pageNumber);
+          }
+
+          // Set highlighted transaction
+          setHighlightedTxnId(highlightId);
+
+          // Scroll to the transaction row after a short delay to ensure rendering
+          setTimeout(() => {
+            const rowElement = document.getElementById(`txn-row-${highlightId}`);
+            if (rowElement) {
+              rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 300);
+
+          // Remove highlight after animation completes (5 seconds)
+          setTimeout(() => {
+            setHighlightedTxnId(null);
+          }, 5000);
+        }
       }
+
+      // Clean up URL to prevent re-highlighting on next render
+      navigate(location.pathname, { replace: true });
     }
-  }, [location.search, transactions, loading, navigate, location.pathname]);
+  }, [location.search, transactions, allTransactions, loading, navigate, location.pathname, filterBU, debouncedSearch, filterType, currentPage, itemsPerPage]);
 
   // Debounce Search
   useEffect(() => {
@@ -618,18 +722,18 @@ export function QuanLyThuChi() {
     return <span className={`px-2 py-1 rounded-full text-xs font-semibold ${(styles as any)[status] || ''}`}>{status}</span>;
   };
 
-  // Calculate Summary Stats
+  // Calculate Summary Stats - Count ALL transactions regardless of approval status and filter type
   const stats = React.useMemo(() => {
-    const income = transactions.filter(t => t.transactionType === 'INCOME' && t.approvalStatus === 'APPROVED').reduce((sum, t) => sum + t.amount, 0);
-    const expense = transactions.filter(t => t.transactionType === 'EXPENSE' && t.approvalStatus === 'APPROVED').reduce((sum, t) => sum + t.amount, 0);
-    const debt = transactions.filter(t => t.transactionType === 'LOAN' && t.paymentStatus === 'UNPAID').reduce((sum, t) => sum + t.amount, 0);
+    const income = allTransactions.filter(t => t.transactionType === 'INCOME').reduce((sum, t) => sum + t.amount, 0);
+    const expense = allTransactions.filter(t => t.transactionType === 'EXPENSE').reduce((sum, t) => sum + t.amount, 0);
+    const debt = allTransactions.filter(t => t.transactionType === 'LOAN').reduce((sum, t) => sum + t.amount, 0);
     return {
       income,
       expense,
       balance: income - expense,
       debt
     };
-  }, [transactions]);
+  }, [allTransactions]);
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen font-sans">
@@ -651,7 +755,6 @@ export function QuanLyThuChi() {
               </h3>
             </div>
           </div>
-          <p className="text-xs mt-4 text-green-600 font-medium">Đã phê duyệt</p>
         </div>
 
         {/* Total Expense */}
@@ -664,7 +767,6 @@ export function QuanLyThuChi() {
               </h3>
             </div>
           </div>
-          <p className="text-xs mt-4 text-red-600 font-medium">Đã phê duyệt</p>
         </div>
 
         {/* Total Loan */}
@@ -677,7 +779,6 @@ export function QuanLyThuChi() {
               </h3>
             </div>
           </div>
-          <p className="text-xs mt-4 text-orange-600 font-medium">Chưa thanh toán</p>
         </div>
 
         {/* Profit */}
@@ -690,7 +791,6 @@ export function QuanLyThuChi() {
               </h3>
             </div>
           </div>
-          <p className={`text-xs mt-4 font-medium ${stats.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>Thu - Chi</p>
         </div>
       </div>
 
@@ -878,7 +978,7 @@ export function QuanLyThuChi() {
           <div className="p-12 text-center text-gray-500">Đang tải dữ liệu...</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full" ref={tableRef}>
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   {columns.filter(c => c.visible).map((col, idx) => (
@@ -887,79 +987,100 @@ export function QuanLyThuChi() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {paginatedTransactions.map((txn) => (
-                  <tr key={txn.id} className="hover:bg-gray-50 transition-colors">
-                    {columns.filter(c => c.visible).map(col => {
-                      if (col.id === 'transactionDate') return <td className="px-6 py-4 text-sm text-gray-600">{formatDate(txn.transactionDate)}</td>;
-                      if (col.id === 'transactionCode') return <td className="px-6 py-4 text-sm font-medium text-blue-700">{txn.transactionCode}</td>;
-                      if (col.id === 'category') return <td className="px-6 py-4 text-sm text-gray-700">{txn.category?.name || '-'}</td>;
-                      if (col.id === 'transactionType') return <td className="px-6 py-4">
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${txn.transactionType === 'INCOME' ? 'bg-green-50 text-green-700 border-green-200' :
-                          txn.transactionType === 'EXPENSE' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-blue-50 text-blue-700 border-blue-200'
-                          }`}>
-                          {txn.transactionType === 'INCOME' ? 'THU' : txn.transactionType === 'EXPENSE' ? 'CHI' : 'VAY'}
-                        </span>
-                      </td>;
-                      if (col.id === 'objectName') return <td className="px-6 py-4 text-sm text-gray-700 font-medium">{getObjectName(txn)}</td>;
-                      if (col.id === 'paymentMethod') return <td className="px-6 py-4 text-sm text-gray-600 font-medium">{txn.paymentMethod?.name || '-'}</td>;
-                      if (col.id === 'businessUnit') return (
-                        <td className="px-6 py-4 text-sm text-gray-700">
-                          {txn.businessUnit?.name || '-'}
-                        </td>
-                      );
-                      if (col.id === 'project') return <td className="px-6 py-4 text-sm text-gray-600">{txn.projectName || txn.project?.name || '-'}</td>;
-                      if (col.id === 'amount') return (
-                        <td className={`px-6 py-4 text-right text-sm font-bold ${txn.transactionType === 'INCOME' ? 'text-green-600' :
-                          txn.transactionType === 'EXPENSE' ? 'text-red-600' : 'text-blue-600'
-                          }`}>
-                          {txn.transactionType === 'INCOME' ? '+' : '-'}{formatCurrency(txn.amount)}
-                        </td>
-                      );
-                      if (col.id === 'paymentStatus') return <td className="px-6 py-4 text-sm text-gray-700">
-                        <div className="flex items-center gap-2">
-                          <span>
-                            {txn.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                {paginatedTransactions.map((txn) => {
+                  const isHighlighted = highlightedTxnId === txn.id;
+                  return (
+                    <tr
+                      key={txn.id}
+                      id={`txn-row-${txn.id}`}
+                      className={`transition-all duration-300 ${isHighlighted
+                        ? 'bg-yellow-100 animate-pulse-slow'
+                        : 'hover:bg-gray-50'
+                        }`}
+                      style={isHighlighted ? {
+                        animation: 'highlight-flash 2s ease-in-out 2',
+                        boxShadow: '0 0 20px rgba(251, 191, 36, 0.5)'
+                      } : {}}
+                    >
+                      {columns.filter(c => c.visible).map(col => {
+                        if (col.id === 'transactionDate') return <td className="px-6 py-4 text-sm text-gray-600">{formatDate(txn.transactionDate)}</td>;
+                        if (col.id === 'transactionCode') return (
+                          <td className={`px-6 py-4 text-sm font-medium ${isHighlighted
+                            ? 'text-blue-900 font-bold animate-pulse'
+                            : 'text-blue-700'
+                            }`}>
+                            {txn.transactionCode}
+                          </td>
+                        );
+                        if (col.id === 'category') return <td className="px-6 py-4 text-sm text-gray-700">{txn.category?.name || '-'}</td>;
+                        if (col.id === 'transactionType') return <td className="px-6 py-4">
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${txn.transactionType === 'INCOME' ? 'bg-green-50 text-green-700 border-green-200' :
+                            txn.transactionType === 'EXPENSE' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-blue-50 text-blue-700 border-blue-200'
+                            }`}>
+                            {txn.transactionType === 'INCOME' ? 'THU' : txn.transactionType === 'EXPENSE' ? 'CHI' : 'VAY'}
                           </span>
-                          {txn.attachments && txn.attachments.length > 0 && (
-                            <div className="flex items-center gap-1 text-gray-400" title={`${txn.attachments.length} chứng từ đính kèm`}>
-                              <Paperclip className="w-3.5 h-3.5" />
-                              <span className="text-[11px] font-bold">{txn.attachments.length}</span>
-                            </div>
-                          )}
-                        </div>
-                      </td>;
-                      if (col.id === 'approvalStatus') return <td className="px-6 py-4">{getStatusBadge(txn.approvalStatus)}</td>;
-                      if (col.id === 'actions') return (
-                        <td className="px-6 py-4 text-center">
-                          <div className="flex justify-center gap-2">
-                            <button onClick={() => handleView(txn)} className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors" title="Xem chi tiết"><Eye className="w-4 h-4" /></button>
-                            {(txn.approvalStatus === 'DRAFT' || txn.approvalStatus === 'REJECTED' || txn.approvalStatus === 'PENDING') ? (
-                              <>
-                                <button onClick={() => handleEdit(txn)} className="p-1.5 hover:bg-orange-50 text-orange-600 rounded-lg transition-colors" title="Chỉnh sửa"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => handleDelete(txn.id)} className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors" title="Xóa"><Trash2 className="w-4 h-4" /></button>
-                                {txn.approvalStatus !== 'PENDING' && (
-                                  <button onClick={() => handleCancel(txn.id)} className="p-1.5 hover:bg-gray-100 text-gray-500 rounded-lg transition-colors" title="Hủy"><XCircle className="w-4 h-4" /></button>
-                                )}
-                              </>
-                            ) : txn.approvalStatus !== 'APPROVED' ? (
-                              <button disabled className="p-1.5 text-gray-300 cursor-not-allowed"><Edit2 className="w-4 h-4" /></button>
-                            ) : null}
-                            {txn.approvalStatus === 'APPROVED' && (
-                              <button disabled className="p-1.5 text-gray-300 cursor-not-allowed" title="Không thể xóa giao dịch đã duyệt"><Trash2 className="w-4 h-4" /></button>
-                            )}
-                            {txn.approvalStatus === 'PENDING' && (currentUser.role === 'CEO' || currentUser.role === 'Admin') && (
-                              <>
-                                <button onClick={() => handleApprove(txn.id)} className="p-1.5 hover:bg-green-50 text-green-600 rounded-lg transition-colors" title="Duyệt"><CheckCircle className="w-4 h-4" /></button>
-                                <button onClick={() => handleReject(txn.id)} className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors" title="Từ chối"><XCircle className="w-4 h-4" /></button>
-                              </>
+                        </td>;
+                        if (col.id === 'objectName') return <td className="px-6 py-4 text-sm text-gray-700 font-medium">{getObjectName(txn)}</td>;
+                        if (col.id === 'paymentMethod') return <td className="px-6 py-4 text-sm text-gray-600 font-medium">{txn.paymentMethod?.name || '-'}</td>;
+                        if (col.id === 'businessUnit') return (
+                          <td className="px-6 py-4 text-sm text-gray-700">
+                            {txn.businessUnit?.name || '-'}
+                          </td>
+                        );
+                        if (col.id === 'project') return <td className="px-6 py-4 text-sm text-gray-600">{txn.projectName || txn.project?.name || '-'}</td>;
+                        if (col.id === 'amount') return (
+                          <td className={`px-6 py-4 text-right text-sm font-bold ${txn.transactionType === 'INCOME' ? 'text-green-600' :
+                            txn.transactionType === 'EXPENSE' ? 'text-red-600' : 'text-blue-600'
+                            }`}>
+                            {txn.transactionType === 'INCOME' ? '+' : '-'}{formatCurrency(txn.amount)}
+                          </td>
+                        );
+                        if (col.id === 'paymentStatus') return <td className="px-6 py-4 text-sm text-gray-700">
+                          <div className="flex items-center gap-2">
+                            <span>
+                              {txn.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                            </span>
+                            {txn.attachments && txn.attachments.length > 0 && (
+                              <div className="flex items-center gap-1 text-gray-400" title={`${txn.attachments.length} chứng từ đính kèm`}>
+                                <Paperclip className="w-3.5 h-3.5" />
+                                <span className="text-[11px] font-bold">{txn.attachments.length}</span>
+                              </div>
                             )}
                           </div>
-                        </td>
-                      );
-                      return <td className="px-6 py-4">-</td>;
-                    })}
-                  </tr>
-                ))}
+                        </td>;
+                        if (col.id === 'approvalStatus') return <td className="px-6 py-4">{getStatusBadge(txn.approvalStatus)}</td>;
+                        if (col.id === 'actions') return (
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex justify-center gap-2">
+                              <button onClick={() => handleView(txn)} className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors" title="Xem chi tiết"><Eye className="w-4 h-4" /></button>
+                              {(txn.approvalStatus === 'DRAFT' || txn.approvalStatus === 'REJECTED' || txn.approvalStatus === 'PENDING') ? (
+                                <>
+                                  <button onClick={() => handleEdit(txn)} className="p-1.5 hover:bg-orange-50 text-orange-600 rounded-lg transition-colors" title="Chỉnh sửa"><Edit2 className="w-4 h-4" /></button>
+                                  <button onClick={() => handleDelete(txn.id)} className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors" title="Xóa"><Trash2 className="w-4 h-4" /></button>
+                                  {txn.approvalStatus !== 'PENDING' && (
+                                    <button onClick={() => handleCancel(txn.id)} className="p-1.5 hover:bg-gray-100 text-gray-500 rounded-lg transition-colors" title="Hủy"><XCircle className="w-4 h-4" /></button>
+                                  )}
+                                </>
+                              ) : txn.approvalStatus !== 'APPROVED' ? (
+                                <button disabled className="p-1.5 text-gray-300 cursor-not-allowed"><Edit2 className="w-4 h-4" /></button>
+                              ) : null}
+                              {txn.approvalStatus === 'APPROVED' && (
+                                <button disabled className="p-1.5 text-gray-300 cursor-not-allowed" title="Không thể xóa giao dịch đã duyệt"><Trash2 className="w-4 h-4" /></button>
+                              )}
+                              {txn.approvalStatus === 'PENDING' && (currentUser.role === 'CEO' || currentUser.role === 'Admin') && (
+                                <>
+                                  <button onClick={() => handleApprove(txn.id)} className="p-1.5 hover:bg-green-50 text-green-600 rounded-lg transition-colors" title="Duyệt"><CheckCircle className="w-4 h-4" /></button>
+                                  <button onClick={() => handleReject(txn.id)} className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors" title="Từ chối"><XCircle className="w-4 h-4" /></button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        );
+                        return <td className="px-6 py-4">-</td>;
+                      })}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -2635,3 +2635,12 @@ html {
     transform: rotate(360deg);
   }
 }
+
+@keyframes highlight-flash {
+  0%, 100% {
+    background-color: rgb(254 249 195); /* yellow-100 */
+  }
+  50% {
+    background-color: rgb(254 240 138); /* yellow-200 */
+  }
+}

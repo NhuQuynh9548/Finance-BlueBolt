@@ -185,8 +185,10 @@ export function Header({ sidebarCollapsed }: HeaderProps) {
                           key={notif.id}
                           onClick={() => {
                             if (notif.unread) handleMarkAsRead(notif.id);
-                            if (notif.targetPath && notif.relatedId) {
-                              navigate(`${notif.targetPath}?id=${notif.relatedId}&t=${Date.now()}`);
+                            if (notif.relatedId) {
+                              // Always navigate to absolute path with highlight parameter
+                              // Add timestamp to force navigation even when already on the page
+                              navigate(`/quan-ly-thu-chi?highlight=${notif.relatedId}&t=${Date.now()}`);
                               setShowNotifications(false);
                             }
                           }}
