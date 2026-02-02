@@ -27,6 +27,8 @@ model User {
   businessUnit BusinessUnit?  @relation(fields: [buId], references: [id])
   role         Role?          @relation(fields: [roleId], references: [id])
   notifications Notification[]
+  auditLogs    AuditLog[]
+  transactions Transaction[]  @relation("TransactionCreator")
 
   @@map("users")
 }
@@ -170,6 +172,7 @@ model Transaction {
   rejectionReason    String?                 @map("rejection_reason")
   description        String
   createdBy          String?                 @map("created_by")
+  creator            User?                   @relation("TransactionCreator", fields: [createdBy], references: [id])
   createdAt          DateTime                @default(now()) @map("created_at")
   updatedAt          DateTime                @updatedAt @map("updated_at")
   studentName        String?                 @map("student_name")
@@ -417,12 +420,35 @@ model Notification {
   id         String   @id @default(uuid())
   userId     String   @map("user_id")
   message    String
-  type       String   @default("info")
+  type       String   @default("info") // info, success, warning, error
   unread     Boolean  @default(true)
-  relatedId  String?  @map("related_id")
-  targetPath String?  @map("target_path")
+  relatedId  String?  @map("related_id") // ID of related entity (e.g., transaction)
+  targetPath String?  @map("target_path") // Path to navigate when clicked
   createdAt  DateTime @default(now()) @map("created_at")
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@index([unread])
   @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  tableName  String   @map("table_name")  // Tên bảng bị thay đổi
+  recordId   String   @map("record_id")   // ID của record bị thay đổi
+  action     String                       // CREATE, UPDATE, DELETE, APPROVE, REJECT, CANCEL
+  userId     String   @map("user_id")     // User thực hiện hành động
+  user       User     @relation(fields: [userId], references: [id])
+  oldValues  Json?    @map("old_values")  // Giá trị cũ (JSON)
+  newValues  Json?    @map("new_values")  // Giá trị mới (JSON)
+  changes    Json?                        // Chi tiết thay đổi
+  reason     String?                      // Lý do thay đổi
+  ipAddress  String?  @map("ip_address")  // IP address
+  userAgent  String?  @map("user_agent")  // Browser/device info
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([tableName, recordId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

@@ -347,6 +347,15 @@ export function QuanLyDoiTac() {
       : 'bg-gray-100 text-gray-700';
   };
 
+  const getStatusLabel = (status: string) => {
+    // Display status in Vietnamese
+    const labels: Record<string, string> = {
+      'ACTIVE': 'Hoạt động',
+      'INACTIVE': 'Ngừng hoạt động'
+    };
+    return labels[status] || status;
+  };
+
   const canDeactivate = (partner: Partner) => {
     if (partner.balance !== 0) return { canDeactivate: false, reason: 'Đối tác còn dư nợ' };
     const activeContracts = partner.contracts?.filter(c => {
@@ -519,7 +528,7 @@ export function QuanLyDoiTac() {
                           if (column.id === 'taxCode') return <td key={column.id} className="px-6 py-4 text-sm text-gray-600">{partner.taxCode}</td>;
                           if (column.id === 'phone') return <td key={column.id} className="px-6 py-4 text-sm text-gray-600">{partner.phone}</td>;
                           if (column.id === 'contactPerson') return <td key={column.id} className="px-6 py-4 text-sm text-gray-600">{partner.contactPerson}</td>;
-                          if (column.id === 'status') return <td key={column.id} className="px-6 py-4 text-center"><span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeColor(partner.status)}`}>{partner.status}</span></td>;
+                          if (column.id === 'status') return <td key={column.id} className="px-6 py-4 text-center"><span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeColor(partner.status)}`}>{getStatusLabel(partner.status)}</span></td>;
                           if (column.id === 'actions') return (
                             <td key={column.id} className="px-6 py-4 text-center">
                               <div className="flex items-center justify-center gap-2">

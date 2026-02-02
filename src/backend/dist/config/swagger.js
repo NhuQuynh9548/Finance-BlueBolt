@@ -107,9 +107,9 @@ const options = {
                         id: { type: 'string' },
                         transactionCode: { type: 'string' },
                         transactionDate: { type: 'string', format: 'date-time' },
-                        transactionType: { type: 'string', enum: ['INCOME', 'EXPENSE', 'LOAN'] },
+                        transactionType: { type: 'string', enum: ['THU', 'CHI', 'VAY'] },
                         amount: { type: 'number' },
-                        approvalStatus: { type: 'string', enum: ['DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'] },
+                        approvalStatus: { type: 'string', enum: ['NHAP', 'CHO DUYET', 'DA DUYET', 'TU CHOI', 'HUY'] },
                         description: { type: 'string' }
                     }
                 },

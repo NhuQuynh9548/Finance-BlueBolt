@@ -5,6 +5,52 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 const router = Router();
 router.use(authenticate);
 
+// Helper function to create audit log
+async function createAuditLog(params: {
+    tableName: string;
+    recordId: string;
+    action: string;
+    userId: string;
+    oldValues?: any;
+    newValues?: any;
+    reason?: string;
+    req?: any;
+}) {
+    try {
+        const changes: any = {};
+
+        if (params.oldValues && params.newValues) {
+            // Calculate differences
+            Object.keys(params.newValues).forEach(key => {
+                if (JSON.stringify(params.oldValues[key]) !== JSON.stringify(params.newValues[key])) {
+                    changes[key] = {
+                        old: params.oldValues[key],
+                        new: params.newValues[key]
+                    };
+                }
+            });
+        }
+
+        await prisma.auditLog.create({
+            data: {
+                tableName: params.tableName,
+                recordId: params.recordId,
+                action: params.action,
+                userId: params.userId,
+                oldValues: params.oldValues || null,
+                newValues: params.newValues || null,
+                changes: Object.keys(changes).length > 0 ? changes : null,
+                reason: params.reason,
+                ipAddress: params.req?.ip || params.req?.connection?.remoteAddress,
+                userAgent: params.req?.headers?.['user-agent']
+            }
+        });
+    } catch (error) {
+        console.error('Failed to create audit log:', error);
+    }
+}
+
+
 // GET /api/transactions
 router.get('/', async (req: AuthRequest, res: Response) => {
     try {
@@ -72,7 +118,13 @@ router.get('/', async (req: AuthRequest, res: Response) => {
                 businessUnit: true,
                 paymentMethod: true,
                 attachments: true,
-                allocationPreviews: true
+                allocationPreviews: true,
+                creator: {
+                    select: {
+                        name: true,
+                        fullName: true
+                    }
+                }
             },
             orderBy: { transactionCode: 'asc' }
         });
@@ -97,7 +149,13 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
                 businessUnit: true,
                 paymentMethod: true,
                 attachments: true,
-                allocationPreviews: true
+                allocationPreviews: true,
+                creator: {
+                    select: {
+                        name: true,
+                        fullName: true
+                    }
+                }
             }
         });
 
@@ -120,11 +178,8 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         // Set createdBy to current user
         data.createdBy = req.user!.id;
 
-        if (data.approvalStatus === 'PENDING') {
-            data.approvalStatus = 'PENDING';
-        } else {
-            data.approvalStatus = 'DRAFT';
-        }
+        // Default to APPROVED for all new transactions
+        data.approvalStatus = 'APPROVED';
 
         // --- ATOMIC CODE GENERATION ---
         // Use transactionDate from form, fallback to current date if invalid
@@ -174,38 +229,15 @@ router.post('/', async (req: AuthRequest, res: Response) => {
                 category: true,
                 businessUnit: true,
                 attachments: true,
-                allocationPreviews: true
+                allocationPreviews: true,
+                creator: {
+                    select: {
+                        name: true,
+                        fullName: true
+                    }
+                }
             }
         });
-
-        // Create notifications for Admins and CEOs
-        if (data.approvalStatus === 'PENDING') {
-            try {
-                const adminsAndCeos = await (prisma as any).user.findMany({
-                    where: {
-                        role: {
-                            name: {
-                                in: ['Admin', 'CEO'],
-                                mode: 'insensitive'
-                            }
-                        }
-                    }
-                });
-
-                await (prisma as any).notification.createMany({
-                    data: adminsAndCeos.map((u: any) => ({
-                        userId: u.id,
-                        message: `Phiếu ${data.transactionType === 'INCOME' ? 'thu' : 'chi'} #${atomicCode} chờ duyệt`,
-                        type: 'warning',
-                        unread: true,
-                        relatedId: transaction.id,
-                        targetPath: '/quan-ly-thu-chi'
-                    }))
-                });
-            } catch (notifErr) {
-                console.error('Failed to create notifications:', notifErr);
-            }
-        }
 
         // Notify the creator
         try {
@@ -226,18 +258,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         res.status(201).json(transaction);
     } catch (error) {
         console.error('Create transaction error:', error);
-        console.error('Request body:', req.body);
-
-        // Send detailed error message
-        if (error instanceof Error) {
-            res.status(500).json({
-                error: 'Internal server error',
-                message: error.message,
-                details: error.stack
-            });
-        } else {
-            res.status(500).json({ error: 'Internal server error' });
-        }
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
@@ -245,6 +266,9 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 router.put('/:id', async (req: AuthRequest, res: Response) => {
     try {
         const id = req.params.id as string;
+        const user = req.user!;
+        const roleName = user.role.toLowerCase();
+
         const currentTxn = await prisma.transaction.findUnique({
             where: { id }
         });
@@ -253,8 +277,12 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ error: 'Transaction not found' });
         }
 
-        if (currentTxn.approvalStatus === 'APPROVED') {
-            return res.status(400).json({ error: 'Cannot edit an approved transaction' });
+        // Only Admin and CEO can edit approved transactions
+        const canEditApproved = roleName === 'admin' || roleName === 'ceo';
+        if (currentTxn.approvalStatus === 'APPROVED' && !canEditApproved) {
+            return res.status(400).json({
+                error: 'Only Admin and CEO can edit approved transactions'
+            });
         }
 
         const {
@@ -292,6 +320,18 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
             }
         });
 
+        // Create audit log
+        await createAuditLog({
+            tableName: 'Transaction',
+            recordId: id,
+            action: 'UPDATE',
+            userId: user.id,
+            oldValues: currentTxn,
+            newValues: transaction,
+            reason: req.body.updateReason,
+            req
+        });
+
         res.json(transaction);
     } catch (error) {
         console.error('Update transaction error:', error);
@@ -303,6 +343,9 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
 router.delete('/:id', async (req: AuthRequest, res: Response) => {
     try {
         const id = req.params.id as string;
+        const user = req.user!;
+        const roleName = user.role.toLowerCase();
+
         const currentTxn = await prisma.transaction.findUnique({
             where: { id }
         });
@@ -311,9 +354,24 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ error: 'Transaction not found' });
         }
 
-        if (currentTxn.approvalStatus === 'APPROVED') {
-            return res.status(400).json({ error: 'Cannot delete an approved transaction' });
+        // Only Admin and CEO can delete approved transactions
+        const canDeleteApproved = roleName === 'admin' || roleName === 'ceo';
+        if (currentTxn.approvalStatus === 'APPROVED' && !canDeleteApproved) {
+            return res.status(400).json({
+                error: 'Only Admin and CEO can delete approved transactions'
+            });
         }
+
+        // Create audit log before deletion
+        await createAuditLog({
+            tableName: 'Transaction',
+            recordId: id,
+            action: 'DELETE',
+            userId: user.id,
+            oldValues: currentTxn,
+            reason: req.body.deleteReason,
+            req
+        });
 
         await prisma.transaction.delete({
             where: { id }
@@ -347,6 +405,17 @@ router.put('/:id/approve', async (req: AuthRequest, res: Response) => {
                 category: true,
                 businessUnit: true
             }
+        });
+
+        // Create audit log
+        await createAuditLog({
+            tableName: 'Transaction',
+            recordId: req.params.id as string,
+            action: 'APPROVE',
+            userId: user.id,
+            oldValues: { approvalStatus: 'PENDING' },
+            newValues: { approvalStatus: 'APPROVED', paymentStatus: 'PAID' },
+            req
         });
 
         // Notify the creator
@@ -393,12 +462,25 @@ router.put('/:id/reject', async (req: AuthRequest, res: Response) => {
             where: { id: req.params.id as string },
             data: {
                 approvalStatus: 'REJECTED',
-                rejectionReason: reason
+                paymentStatus: 'UNPAID', // Auto-update to UNPAID when rejected
+                rejectionReason: reason || 'No reason provided'
             },
             include: {
                 category: true,
                 businessUnit: true
             }
+        });
+
+        // Create audit log
+        await createAuditLog({
+            tableName: 'Transaction',
+            recordId: req.params.id as string,
+            action: 'REJECT',
+            userId: user.id,
+            oldValues: { approvalStatus: 'PENDING' },
+            newValues: { approvalStatus: 'REJECTED', paymentStatus: 'UNPAID' },
+            reason: reason,
+            req
         });
 
         // Notify the creator

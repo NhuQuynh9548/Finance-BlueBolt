@@ -330,24 +330,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* BU Filter Info */}
-        <div className="mt-4">
-          {!canSelectBU ? (
-            <div className="flex items-center gap-2 bg-orange-50 px-4 py-2 rounded-lg border border-orange-200 inline-flex">
-              <span className="text-sm text-orange-700">
-                📊 Bạn đang xem dữ liệu của <strong>{selectedBU}</strong>
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200 inline-flex">
-              <span className="text-sm text-blue-700">
-                💡 Thay đổi BU ở <strong>thanh điều hướng phía trên</strong>
-                {selectedBU === 'all' && ' (Đang xem: Tất cả BU)'}
-                {selectedBU !== 'all' && ` (Đang xem: ${selectedBU})`}
-              </span>
-            </div>
-          )}
-        </div>
+        {/* BU Filter Info Removed */}
       </div>
 
       {/* KPI Cards */}

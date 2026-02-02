@@ -23,7 +23,7 @@ CREATE TYPE "cost_allocation" AS ENUM ('DIRECT', 'INDIRECT');
 CREATE TYPE "payment_status" AS ENUM ('PAID', 'UNPAID');
 
 -- CreateEnum
-CREATE TYPE "approval_status" AS ENUM ('DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED');
+CREATE TYPE "approval_status" AS ENUM ('NHÁP', 'CHỜ DUYỆT', 'ĐÃ DUYỆT', 'TỪ CHỐI', 'HỦY');
 
 -- CreateEnum
 CREATE TYPE "category_type" AS ENUM ('THU', 'CHI', 'VAY', 'HOAN_UNG');

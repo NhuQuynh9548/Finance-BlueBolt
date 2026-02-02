@@ -1,7 +1,9 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
+// Force re-compilation
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Search, Plus, Eye, Edit2, Trash2, DollarSign, X, AlertCircle, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Save, Calendar, Building2, FileText, Paperclip, TrendingUp, TrendingDown, RefreshCw, ChevronDown, ChevronUp, User, Users, Upload, Printer, Send, CheckCircle, XCircle, Image as ImageIcon, ExternalLink, Briefcase, RotateCcw, Settings, GripVertical, Layers } from 'lucide-react';
+import { Search, Plus, Eye, Edit2, Trash2, DollarSign, X, AlertCircle, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Save, Calendar, Building2, FileText, Paperclip, TrendingUp, TrendingDown, RefreshCw, ChevronDown, ChevronUp, User, Users, Upload, Printer, Send, CheckCircle, XCircle, Image as ImageIcon, ExternalLink, Briefcase, RotateCcw, Settings, GripVertical, Layers, Download, History } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
+import * as XLSX from 'xlsx';
 import { transactionService } from '../../services/transactionService';
 import { categoryService } from '../../services/categoryService';
 import { projectService } from '../../services/projectService';
@@ -11,6 +13,8 @@ import { businessUnitService } from '../../services/businessUnitService';
 import { paymentMethodService } from '../../services/paymentMethodService';
 import { allocationRuleService } from '../../services/allocationRuleService';
 import { uploadService } from '../../services/uploadService';
+import { auditLogService } from '../../services/auditLogService';
+
 
 // Interfaces matching Backend
 interface TransactionFile {
@@ -41,23 +45,23 @@ interface Transaction {
   partner?: { id: string; partnerName: string };
   employeeId?: string;
   employee?: { id: string; fullName: string };
+  studentName?: string;
+  otherName?: string;
+  projectName?: string;
+  amount: number;
   paymentMethodId?: string;
   paymentMethod?: { id: string; name: string };
   businessUnitId: string;
   businessUnit?: { id: string; name: string };
-  amount: number;
-  costAllocation: 'DIRECT' | 'INDIRECT';
-  allocationRuleId?: string;
-  isAdvance: boolean;
-  studentName?: string;
-  otherName?: string;
-  attachments?: TransactionFile[];
   paymentStatus: 'PAID' | 'UNPAID';
   approvalStatus: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
-  rejectionReason?: string;
   description: string;
-  objectName?: string; // Helper for display
-  projectName?: string; // Manual name entry
+  createdBy?: string;
+  creator?: { name: string; fullName: string };
+  attachments?: TransactionFile[];
+  allocationRuleId?: string;
+  isAdvance: boolean;
+  rejectionReason?: string;
 }
 
 type SortField = 'transactionDate' | 'transactionCode' | 'amount';
@@ -84,6 +88,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: 'project', label: 'Dự án', sortable: false, align: 'left', width: 150, visible: true },
   { id: 'amount', label: 'Số tiền', sortable: true, align: 'right', width: 140, visible: true },
   { id: 'paymentStatus', label: 'TT', sortable: false, align: 'left', width: 130, visible: true },
+  { id: 'creator', label: 'Người tạo', sortable: false, align: 'left', width: 140, visible: true },
   { id: 'approvalStatus', label: 'Phê duyệt', sortable: false, align: 'left', width: 130, visible: true },
   { id: 'actions', label: 'Hành động', sortable: false, align: 'center', width: 120, visible: true },
 ];
@@ -140,14 +145,36 @@ export function QuanLyThuChi() {
   const [highlightedTxnId, setHighlightedTxnId] = useState<string | null>(null);
   const tableRef = React.useRef<HTMLTableElement>(null);
 
+  // Audit Log States
+  const [showAuditLog, setShowAuditLog] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+
+
   // Load columns from localStorage on mount
   useEffect(() => {
     const savedColumns = localStorage.getItem('thuChiColumns');
     if (savedColumns) {
       try {
         const parsed = JSON.parse(savedColumns);
+        // Sync logic: Keep user's order/visibility but add any new columns from DEFAULT_COLUMNS
+        const existingIds = new Set(parsed.map((c: ColumnConfig) => c.id));
+        const newColumns = [...parsed];
+
+        DEFAULT_COLUMNS.forEach(defaultCol => {
+          if (!existingIds.has(defaultCol.id)) {
+            // Append new column to the end before 'actions' if possible
+            const actionsIndex = newColumns.findIndex(c => c.id === 'actions');
+            if (actionsIndex !== -1) {
+              newColumns.splice(actionsIndex, 0, defaultCol);
+            } else {
+              newColumns.push(defaultCol);
+            }
+          }
+        });
+
         // Filter out costAllocation in case it's still in the user's localStorage
-        const filtered = parsed.filter((col: ColumnConfig) => col.id !== 'costAllocation');
+        const filtered = newColumns.filter((col: ColumnConfig) => col.id !== 'costAllocation');
         setColumns(filtered);
       } catch (e) {
         console.error('Error parsing saved columns:', e);
@@ -421,6 +448,9 @@ export function QuanLyThuChi() {
 
   // Filter Logic (Client Side for Search Text)
   const filteredTransactions = transactions.filter(txn => {
+    // Exclude REJECTED transactions from the list
+    if (txn.approvalStatus === 'REJECTED') return false;
+
     const searchLower = debouncedSearch.toLowerCase();
     const matchCode = txn.transactionCode?.toLowerCase().includes(searchLower);
     const matchDesc = txn.description?.toLowerCase().includes(searchLower);
@@ -483,7 +513,7 @@ export function QuanLyThuChi() {
       transactionDate: now.toISOString().split('T')[0],
       amount: 0,
       paymentStatus: 'UNPAID',
-      approvalStatus: 'DRAFT',
+      approvalStatus: 'APPROVED',
       costAllocation: 'DIRECT',
       isAdvance: false,
       businessUnitId: (selectedBU !== 'all' ? selectedBU : (businessUnits.length > 0 ? businessUnits[0].id : '')),
@@ -498,6 +528,7 @@ export function QuanLyThuChi() {
   const handleEdit = (txn: Transaction) => {
     setModalMode('edit');
     setModalType(txn.transactionType);
+    setSelectedTransaction(txn);
     setSelectedFiles([]);
     setFormData({
       ...txn,
@@ -564,7 +595,7 @@ export function QuanLyThuChi() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent, submitAction: 'DRAFT' | 'PENDING' = 'DRAFT') => {
+  const handleSubmit = async (e: React.FormEvent) => {
     if (e) e.preventDefault();
     try {
       // Validation
@@ -579,7 +610,21 @@ export function QuanLyThuChi() {
       }
 
       setLoading(true);
-      // 1. Upload files first if any
+
+      // 1. Validation for Description and Attachments (Mandatory)
+      if (!formData.description || formData.description.trim() === '') {
+        alert('Vui lòng nhập mô tả chi tiết cho phiếu');
+        setLoading(false);
+        return;
+      }
+
+      if (selectedFiles.length === 0 && (!formData.attachments || formData.attachments.length === 0)) {
+        alert('Vui lòng upload ít nhất một hình ảnh chứng từ đính kèm');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Upload files first if any
       let uploadedAttachments = [];
       if (selectedFiles.length > 0) {
         uploadedAttachments = await uploadService.uploadFiles(selectedFiles);
@@ -594,7 +639,7 @@ export function QuanLyThuChi() {
           ? new Date(formData.transactionDate).toISOString()
           : new Date().toISOString(), // Default to today if not set
         amount: Number(formData.amount),
-        approvalStatus: submitAction,
+        approvalStatus: 'APPROVED',
         attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
         allocationPreviews: undefined
       };
@@ -719,14 +764,185 @@ export function QuanLyThuChi() {
       'REJECTED': 'bg-red-100 text-red-800',
       'CANCELLED': 'bg-gray-100 text-gray-600'
     };
-    return <span className={`px-2 py-1 rounded-full text-xs font-semibold ${(styles as any)[status] || ''}`}>{status}</span>;
+    const labels: { [key: string]: string } = {
+      'DRAFT': 'Nháp',
+      'PENDING': 'Chờ duyệt',
+      'APPROVED': 'Đã duyệt',
+      'REJECTED': 'Từ chối',
+      'CANCELLED': 'Đã hủy'
+    };
+    return <span className={`px-2 py-1 rounded-full text-xs font-semibold ${(styles as any)[status] || ''}`}>{labels[status] || status}</span>;
   };
 
-  // Calculate Summary Stats - Count ALL transactions regardless of approval status and filter type
+  // Handle view audit log
+  const handleViewAuditLog = async () => {
+    if (!selectedTransaction) return;
+
+    setLoadingLogs(true);
+    try {
+      const logs = await auditLogService.getTransactionLogs(selectedTransaction.id);
+      setAuditLogs(logs);
+      setShowAuditLog(true);
+    } catch (error) {
+      console.error('Failed to load audit logs:', error);
+      alert('Không thể tải lịch sử thay đổi');
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
+
+  // Handle close audit log modal and clear cache
+  const handleCloseAuditLog = () => {
+    setShowAuditLog(false);
+    setAuditLogs([]); // Clear cache to prevent showing wrong logs
+  };
+
+  // Export to Excel function
+  const handleExportExcel = () => {
+    try {
+      // Determine report title based on filter type
+      let reportTitle = 'BẢNG TỔNG HỢP THU CHI';
+      let sheetName = 'Tổng hợp';
+
+      if (filterType === 'income') {
+        reportTitle = 'BẢNG TỔNG HỢP DOANH THU';
+        sheetName = 'Doanh thu';
+      } else if (filterType === 'expense') {
+        reportTitle = 'BẢNG TỔNG HỢP CHI PHÍ';
+        sheetName = 'Chi phí';
+      } else if (filterType === 'loan') {
+        reportTitle = 'BẢNG TỔNG HỢP KHOẢN VAY';
+        sheetName = 'Khoản vay';
+      }
+
+      // Get date range from filtered data
+      let dateRangeText = '';
+      if (sortedTransactions.length > 0) {
+        const dates = sortedTransactions.map(t => new Date(t.transactionDate));
+        const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+        const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+        dateRangeText = `Từ ngày ${minDate.toLocaleDateString('vi-VN')} đến ngày ${maxDate.toLocaleDateString('vi-VN')}`;
+      } else {
+        dateRangeText = `Ngày xuất: ${new Date().toLocaleDateString('vi-VN')}`;
+      }
+
+      // Prepare data for export with accounting format
+      const exportData = sortedTransactions.map((txn, index) => ({
+        'STT': index + 1,
+        'Ngày chứng từ': new Date(txn.transactionDate).toLocaleDateString('vi-VN'),
+        'Số chứng từ': txn.transactionCode,
+        'Diễn giải': txn.description || '-',
+        'Danh mục': txn.category?.name || '-',
+        'Đối tượng': getObjectName(txn) || '-',
+        'Dự án': txn.project?.name || '-',
+        'Đơn vị (BU)': txn.businessUnit?.name || '-',
+        'Số tiền (VNĐ)': txn.amount,
+        'Phương thức thanh toán': txn.paymentMethod?.name || '-',
+        'Trạng thái thanh toán': txn.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán',
+        'Người tạo': txn.creator?.fullName || txn.creator?.name || 'Hệ thống',
+        'Trạng thái duyệt': txn.approvalStatus === 'DRAFT' ? 'Nháp' :
+          txn.approvalStatus === 'PENDING' ? 'Chờ duyệt' :
+            txn.approvalStatus === 'APPROVED' ? 'Đã duyệt' :
+              txn.approvalStatus === 'REJECTED' ? 'Từ chối' : 'Đã hủy',
+        'Phân bổ chi phí': txn.costAllocation === 'DIRECT' ? 'Trực tiếp' : 'Gián tiếp'
+      }));
+
+      // Calculate totals
+      const totalAmount = sortedTransactions.reduce((sum, txn) => sum + txn.amount, 0);
+      const paidAmount = sortedTransactions.filter(t => t.paymentStatus === 'PAID').reduce((sum, t) => sum + t.amount, 0);
+      const unpaidAmount = sortedTransactions.filter(t => t.paymentStatus === 'UNPAID').reduce((sum, t) => sum + t.amount, 0);
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet([]);
+
+      // Add title (row 1)
+      XLSX.utils.sheet_add_aoa(ws, [[reportTitle]], { origin: 'A1' });
+
+      // Add date range (row 2)
+      XLSX.utils.sheet_add_aoa(ws, [[dateRangeText]], { origin: 'A2' });
+
+      // Add empty row (row 3)
+
+      // Add data starting from row 4
+      XLSX.utils.sheet_add_json(ws, exportData, { origin: 'A4', skipHeader: false });
+
+      // Add summary section
+      const summaryStartRow = 4 + exportData.length + 2;
+      XLSX.utils.sheet_add_aoa(ws, [
+        ['TỔNG KẾT'],
+        ['Tổng số giao dịch:', sortedTransactions.length],
+        ['Tổng số tiền:', totalAmount],
+        ['Đã thanh toán:', paidAmount],
+        ['Chưa thanh toán:', unpaidAmount]
+      ], { origin: `A${summaryStartRow}` });
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 5 },  // STT
+        { wch: 12 }, // Ngày chứng từ
+        { wch: 15 }, // Số chứng từ
+        { wch: 35 }, // Diễn giải
+        { wch: 20 }, // Danh mục
+        { wch: 25 }, // Đối tượng
+        { wch: 20 }, // Dự án
+        { wch: 15 }, // Đơn vị (BU)
+        { wch: 18 }, // Số tiền
+        { wch: 20 }, // Phương thức TT
+        { wch: 18 }, // Trạng thái TT
+        { wch: 20 }, // Người tạo
+        { wch: 15 }, // Trạng thái duyệt
+        { wch: 15 }  // Phân bổ
+      ];
+
+      // Merge cells for title and date range
+      ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } }, // Title row
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 12 } }  // Date range row
+      ];
+
+      // Style title (bold, centered, larger font)
+      if (!ws['A1'].s) ws['A1'].s = {};
+      ws['A1'].s = {
+        font: { bold: true, sz: 16 },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      };
+
+      // Style date range
+      if (!ws['A2'].s) ws['A2'].s = {};
+      ws['A2'].s = {
+        font: { italic: true, sz: 11 },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      };
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+      // Generate filename
+      const today = new Date().toLocaleDateString('vi-VN').replace(/\//g, '-');
+      const filename = `${sheetName}_${today}.xlsx`;
+
+      // Save file
+      XLSX.writeFile(wb, filename);
+    } catch (error) {
+      console.error('Export Excel error:', error);
+      alert('Có lỗi xảy ra khi xuất file Excel');
+    }
+  };
+
+  // Calculate Summary Stats - Only include PAID transactions for totals, exclude REJECTED/CANCELLED
   const stats = React.useMemo(() => {
-    const income = allTransactions.filter(t => t.transactionType === 'INCOME').reduce((sum, t) => sum + t.amount, 0);
-    const expense = allTransactions.filter(t => t.transactionType === 'EXPENSE').reduce((sum, t) => sum + t.amount, 0);
-    const debt = allTransactions.filter(t => t.transactionType === 'LOAN').reduce((sum, t) => sum + t.amount, 0);
+    // KPI only counts PAID transactions
+    const paidTxns = allTransactions.filter(t =>
+      t.paymentStatus === 'PAID' &&
+      t.approvalStatus !== 'CANCELLED' &&
+      t.approvalStatus !== 'REJECTED'
+    );
+
+    const income = paidTxns.filter(t => t.transactionType === 'INCOME').reduce((sum, t) => sum + t.amount, 0);
+    const expense = paidTxns.filter(t => t.transactionType === 'EXPENSE').reduce((sum, t) => sum + t.amount, 0);
+    const debt = paidTxns.filter(t => t.transactionType === 'LOAN').reduce((sum, t) => sum + t.amount, 0);
+
     return {
       income,
       expense,
@@ -913,6 +1129,12 @@ export function QuanLyThuChi() {
             {/* Action Buttons Row */}
             <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100">
               <button
+                onClick={handleExportExcel}
+                className="px-4 py-2 bg-[#004aad] text-white rounded-lg text-sm font-medium hover:bg-[#1557A0] flex items-center gap-2 shadow-sm"
+              >
+                <Download className="w-4 h-4" /> Xuất Excel
+              </button>
+              <button
                 onClick={handleResetColumns}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2"
               >
@@ -944,16 +1166,7 @@ export function QuanLyThuChi() {
         )}
       </div>
 
-      {/* Info Alert */}
-      <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-6 flex items-start gap-3">
-        <Settings className="w-5 h-5 text-blue-500 mt-0.5" />
-        <div>
-          <p className="text-sm text-blue-800 font-medium">Tùy chỉnh hiển thị cột</p>
-          <p className="text-xs text-blue-600 mt-1">
-            Kéo biểu tượng <GripVertical className="w-3 h-3 inline" /> bên cạnh tên cột để sắp xếp lại theo thói quen sử dụng của bạn. Hệ thống sẽ tự động lưu cấu hình hiển thị cho tài khoản của bạn.
-          </p>
-        </div>
-      </div>
+
 
       {/* Tabs */}
       <div className="flex gap-2 mb-4">
@@ -1049,30 +1262,32 @@ export function QuanLyThuChi() {
                           </div>
                         </td>;
                         if (col.id === 'approvalStatus') return <td className="px-6 py-4">{getStatusBadge(txn.approvalStatus)}</td>;
+                        if (col.id === 'creator') return (
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            {txn.creator?.fullName || txn.creator?.name || 'Hệ thống'}
+                          </td>
+                        );
                         if (col.id === 'actions') return (
                           <td className="px-6 py-4 text-center">
                             <div className="flex justify-center gap-2">
                               <button onClick={() => handleView(txn)} className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors" title="Xem chi tiết"><Eye className="w-4 h-4" /></button>
-                              {(txn.approvalStatus === 'DRAFT' || txn.approvalStatus === 'REJECTED' || txn.approvalStatus === 'PENDING') ? (
-                                <>
-                                  <button onClick={() => handleEdit(txn)} className="p-1.5 hover:bg-orange-50 text-orange-600 rounded-lg transition-colors" title="Chỉnh sửa"><Edit2 className="w-4 h-4" /></button>
-                                  <button onClick={() => handleDelete(txn.id)} className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors" title="Xóa"><Trash2 className="w-4 h-4" /></button>
-                                  {txn.approvalStatus !== 'PENDING' && (
-                                    <button onClick={() => handleCancel(txn.id)} className="p-1.5 hover:bg-gray-100 text-gray-500 rounded-lg transition-colors" title="Hủy"><XCircle className="w-4 h-4" /></button>
-                                  )}
-                                </>
-                              ) : txn.approvalStatus !== 'APPROVED' ? (
-                                <button disabled className="p-1.5 text-gray-300 cursor-not-allowed"><Edit2 className="w-4 h-4" /></button>
-                              ) : null}
-                              {txn.approvalStatus === 'APPROVED' && (
-                                <button disabled className="p-1.5 text-gray-300 cursor-not-allowed" title="Không thể xóa giao dịch đã duyệt"><Trash2 className="w-4 h-4" /></button>
-                              )}
-                              {txn.approvalStatus === 'PENDING' && (currentUser.role === 'CEO' || currentUser.role === 'Admin') && (
-                                <>
-                                  <button onClick={() => handleApprove(txn.id)} className="p-1.5 hover:bg-green-50 text-green-600 rounded-lg transition-colors" title="Duyệt"><CheckCircle className="w-4 h-4" /></button>
-                                  <button onClick={() => handleReject(txn.id)} className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors" title="Từ chối"><XCircle className="w-4 h-4" /></button>
-                                </>
-                              )}
+                              {(() => {
+                                // Admin and CEO can edit/delete approved transactions
+                                const userRole = currentUser?.role?.toLowerCase();
+                                const canEditApproved = userRole === 'admin' || userRole === 'ceo';
+                                const canEdit = txn.approvalStatus !== 'APPROVED' || canEditApproved;
+                                const canApprove = userRole === 'admin' || userRole === 'ceo' || userRole === 'trưởng bu';
+
+                                if (canEdit) {
+                                  return (
+                                    <>
+                                      <button onClick={() => handleEdit(txn)} className="p-1.5 hover:bg-orange-50 text-orange-600 rounded-lg transition-colors" title="Chỉnh sửa"><Edit2 className="w-4 h-4" /></button>
+                                      <button onClick={() => handleDelete(txn.id)} className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors" title="Xóa"><Trash2 className="w-4 h-4" /></button>
+                                    </>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </div>
                           </td>
                         );
@@ -1130,7 +1345,9 @@ export function QuanLyThuChi() {
 
       {/* Modal */}
       {modalMode && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div
+          className={`fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 transition-all ${showAuditLog ? 'opacity-30 pointer-events-none blur-[2px]' : 'opacity-100'}`}
+        >
           <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleSubmit} className="p-6">
               <div className="flex justify-between items-center mb-6 pb-4 border-b">
@@ -1473,7 +1690,10 @@ export function QuanLyThuChi() {
                   </h3>
                   <div className="space-y-4">
                     <div>
-                      <p className="text-[13px] font-semibold text-gray-600 mb-2">Upload hình ảnh chứng từ</p>
+                      <p className="text-[13px] font-semibold text-gray-600 mb-2 flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4 text-blue-600" />
+                        Upload hình ảnh chứng từ <span className="text-red-500">*</span>
+                      </p>
                       <input
                         type="file"
                         multiple
@@ -1512,8 +1732,9 @@ export function QuanLyThuChi() {
                       )}
                     </div>
                     <div>
-                      <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
-                        Mô Tả / Ghi Chú
+                      <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-blue-600" />
+                        Mô Tả / Ghi Chú <span className="text-red-500">*</span>
                       </label>
                       <textarea
                         rows={3}
@@ -1528,34 +1749,179 @@ export function QuanLyThuChi() {
                 </div>
               </div>
 
-              <div className="mt-8 flex justify-center gap-3 border-t pt-6">
-                <button
-                  type="button"
-                  onClick={() => setModalMode(null)}
-                  className="px-8 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold text-sm transition-colors min-w-[120px]"
-                >
-                  Hủy bỏ
-                </button>
-                {modalMode !== 'view' && (
-                  <>
+              <div className="mt-8 flex justify-between items-center border-t pt-6">
+                {/* Simplified footer for all transactions */}
+                <div className="flex gap-3 w-full">
+                  {modalMode === 'edit' && (
                     <button
                       type="button"
-                      onClick={() => handleSubmit(null as any, 'DRAFT')}
-                      className="px-8 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-sm transition-colors min-w-[120px] flex items-center justify-center gap-2"
+                      onClick={handleViewAuditLog}
+                      disabled={loadingLogs}
+                      className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-sm transition-colors flex items-center gap-2"
                     >
-                      <Save className="w-4 h-4" /> Lưu nháp
+                      <History className="w-4 h-4" />
+                      {loadingLogs ? 'Đang tải...' : 'Lịch sử thay đổi'}
                     </button>
+                  )}
+                  <div className="flex-1"></div>
+                  <div className="flex gap-3">
                     <button
                       type="button"
-                      onClick={() => handleSubmit(null as any, 'PENDING')}
-                      className="px-8 py-2 bg-[#004aad] text-white rounded-lg hover:bg-[#1557A0] font-semibold text-sm transition-colors min-w-[120px] flex items-center justify-center gap-2"
+                      onClick={() => setModalMode(null)}
+                      className="px-8 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold text-sm transition-colors min-w-[120px]"
                     >
-                      <Send className="w-4 h-4" /> Gửi duyệt
+                      Hủy bỏ
                     </button>
-                  </>
-                )}
+                    {modalMode !== 'view' && (
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="px-8 py-2 bg-[#004aad] text-white rounded-lg hover:bg-[#1557A0] font-semibold text-sm transition-colors min-w-[120px] flex items-center justify-center gap-2"
+                      >
+                        <Save className="w-4 h-4" />
+                        {loading ? 'Đang lưu...' : (modalMode === 'edit' ? 'Cập nhật' : 'Lưu phiếu')}
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Audit Log Modal */}
+      {showAuditLog && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center"
+          style={{ zIndex: 100000 }}
+        >
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden border-2 border-gray-100 ring-4 ring-black/10">
+            {/* Header */}
+            <div className="flex justify-between items-center p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-800">
+                Lịch sử thay đổi - {selectedTransaction?.transactionCode}
+              </h2>
+              <button
+                onClick={handleCloseAuditLog}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {auditLogs.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+                    <History className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <p className="text-gray-700 font-medium mb-2">
+                    Phiếu này chưa có lịch sử thay đổi
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Mã phiếu: {selectedTransaction?.transactionCode}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Chỉ các thay đổi sau khi phiếu được tạo mới được ghi lại
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {auditLogs.map((log) => (
+                    <div key={log.id} className="relative pl-6 border-l-2 border-blue-500 pb-2 last:pb-0">
+                      {/* Timeline dot */}
+                      <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow-sm"></div>
+
+                      {/* Log entry content */}
+                      <div className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-center mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold">
+                              {log.user?.fullName?.charAt(0) || 'U'}
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-900">{log.user?.fullName}</p>
+                              <p className="text-xs text-gray-500">{new Date(log.createdAt).toLocaleString('vi-VN')}</p>
+                            </div>
+                          </div>
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${log.action === 'UPDATE' ? 'bg-blue-100 text-blue-700' :
+                            log.action === 'APPROVE' ? 'bg-green-100 text-green-700' :
+                              log.action === 'REJECT' ? 'bg-red-100 text-red-700' :
+                                'bg-gray-100 text-gray-700'
+                            }`}>
+                            {log.action === 'UPDATE' ? 'Chỉnh sửa' :
+                              log.action === 'APPROVE' ? 'Phê duyệt' :
+                                log.action === 'REJECT' ? 'Từ chối' : log.action}
+                          </span>
+                        </div>
+
+                        {/* Changes */}
+                        {log.changes && Object.keys(log.changes).length > 0 && (
+                          <div className="space-y-3">
+                            {Object.entries(log.changes).map(([key, value]: [string, any]) => {
+                              // Translate keys
+                              const fieldLabels: { [key: string]: string } = {
+                                'amount': 'Số tiền',
+                                'description': 'Diễn giải',
+                                'transactionDate': 'Ngày giao dịch',
+                                'categoryId': 'Danh mục',
+                                'projectId': 'Dự án',
+                                'partnerId': 'Đối tác',
+                                'employeeId': 'Nhân viên',
+                                'paymentMethodId': 'Phương thức TT',
+                                'paymentStatus': 'Trạng thái TT',
+                                'approvalStatus': 'Trạng thái duyệt',
+                                'costAllocation': 'Phân bổ'
+                              };
+                              const label = fieldLabels[key] || key;
+
+                              // Format values
+                              const formatVal = (v: any) => {
+                                if (v === null || v === undefined) return '---';
+                                if (key === 'amount') return formatCurrency(Number(v));
+                                if (key === 'transactionDate') return new Date(v).toLocaleDateString('vi-VN');
+                                return String(v);
+                              };
+
+                              return (
+                                <div key={key} className="grid grid-cols-12 gap-2 text-sm items-center border-b border-dashed border-gray-100 pb-2 last:border-0 last:pb-0">
+                                  <div className="col-span-3 font-medium text-gray-500">{label}:</div>
+                                  <div className="col-span-9 flex items-center gap-2">
+                                    <span className="text-gray-400 line-through truncate max-w-[150px]">{formatVal(value.old)}</span>
+                                    <span className="text-gray-400">→</span>
+                                    <span className="text-blue-600 font-semibold">{formatVal(value.new)}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Action Reason */}
+                        {log.reason && (
+                          <div className="mt-3 p-2 bg-yellow-50 rounded border border-yellow-100">
+                            <p className="text-xs text-yellow-800 font-semibold">Lý do:</p>
+                            <p className="text-sm text-yellow-700 italic">"{log.reason}"</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t flex justify-end">
+              <button
+                onClick={handleCloseAuditLog}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}

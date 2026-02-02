@@ -253,11 +253,19 @@ export function QuanLyNguoiDung() {
 
   const getDataScopeLabel = (scope: string) => {
     const labels: Record<string, string> = {
-      'global': 'GLOBAL (Toàn hệ thống)',
-      'bu': 'BUSINESS UNIT',
-      'personal': 'PERSONAL (Cá nhân)'
+      'global': 'Toàn hệ thống',
+      'bu': 'Theo BU',
+      'personal': 'Cá nhân'
     };
     return labels[scope] || scope;
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      'active': 'Hoạt động',
+      'locked': 'Đã khóa'
+    };
+    return labels[status] || status;
   };
 
   const getDataScopeBadgeColor = (scope: string) => {
@@ -468,12 +476,12 @@ export function QuanLyNguoiDung() {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`text-xs px-2 py-1 rounded-full font-semibold ${getDataScopeBadgeColor(user.dataScope)}`}>
-                      {user.dataScope.toUpperCase()}
+                      {getDataScopeLabel(user.dataScope)}
                     </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeColor(user.status)}`}>
-                      {user.status === 'active' ? 'Active' : 'Locked'}
+                      {getStatusLabel(user.status)}
                     </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
