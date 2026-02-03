@@ -1,11 +1,28 @@
 import { Router, Response } from 'express';
 import prisma from '../utils/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { auditService } from '../services/auditService';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
+
+// Helper function to calculate differences between objects
+function getChanges(oldVal: any, newVal: any) {
+    const changes: any = {};
+    if (!oldVal || !newVal) return null;
+
+    Object.keys(newVal).forEach(key => {
+        if (JSON.stringify(oldVal[key]) !== JSON.stringify(newVal[key])) {
+            changes[key] = {
+                old: oldVal[key],
+                new: newVal[key]
+            };
+        }
+    });
+    return Object.keys(changes).length > 0 ? changes : null;
+}
 
 // GET /api/employees
 router.get('/', async (req: AuthRequest, res: Response) => {
@@ -103,18 +120,15 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 // POST /api/employees
 router.post('/', async (req: AuthRequest, res: Response) => {
     try {
-        console.log('Received Create Employee Request:', req.body);
         const { fullName, email, phone, businessUnit, specialization, level, joinDate, birthDate, idCard, address } = req.body;
 
         if (!businessUnit) {
-            console.error('Missing Business Unit');
             return res.status(400).json({ error: 'Business Unit is required' });
         }
 
         // Find IDs from names
         const bu = await prisma.businessUnit.findFirst({ where: { name: businessUnit } });
         if (!bu) {
-            console.error(`Business Unit not found: ${businessUnit}`);
             return res.status(400).json({ error: `Business Unit '${businessUnit}' not found` });
         }
 
@@ -134,7 +148,6 @@ router.post('/', async (req: AuthRequest, res: Response) => {
             }
         }
         const employeeId = `BB${String(nextId).padStart(3, '0')}`;
-        console.log('Generated Employee ID:', employeeId);
 
         // Parse dates safely
         const parseDate = (dateStr: string | null | undefined) => {
@@ -142,12 +155,9 @@ router.post('/', async (req: AuthRequest, res: Response) => {
             try {
                 const [day, month, year] = dateStr.split('/');
                 const date = new Date(`${year}-${month}-${day}`);
-                if (isNaN(date.getTime())) {
-                    return null; // Return null if invalid
-                }
+                if (isNaN(date.getTime())) return null;
                 return date;
             } catch (e) {
-                console.error("Date parse error", dateStr, e);
                 return null;
             }
         };
@@ -166,7 +176,6 @@ router.post('/', async (req: AuthRequest, res: Response) => {
             address,
             workStatus: 'WORKING' as const
         };
-        console.log('Prisma Create Data:', createData);
 
         const employee = await prisma.employee.create({
             data: createData,
@@ -177,9 +186,20 @@ router.post('/', async (req: AuthRequest, res: Response) => {
             }
         });
 
+        // Audit Log for CREATE
+        await auditService.log({
+            tableName: 'Employee',
+            recordId: employee.id,
+            action: 'CREATE',
+            userId: req.user!.id,
+            newValues: employee,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] as string
+        });
+
         res.status(201).json(employee);
     } catch (error: any) {
-        console.error('Create employee error details:', error);
+        console.error('Create employee error:', error);
         if (error.code === 'P2002') {
             const field = error.meta?.target?.join(', ');
             return res.status(400).json({ error: `${field} đã được sử dụng (ví dụ: Email, CMND)` });
@@ -193,6 +213,9 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
         const { fullName, email, phone, businessUnit, specialization, level, joinDate, birthDate, idCard, address, workStatus } = req.body;
+
+        const currentEmployee = await prisma.employee.findUnique({ where: { id: id as string } });
+        if (!currentEmployee) return res.status(404).json({ error: 'Employee not found' });
 
         // Find IDs from names
         let bu = null;
@@ -241,6 +264,19 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
             }
         });
 
+        // Audit Log for UPDATE
+        await auditService.log({
+            tableName: 'Employee',
+            recordId: employee.id,
+            action: 'UPDATE',
+            userId: req.user!.id,
+            oldValues: currentEmployee,
+            newValues: employee,
+            changes: getChanges(currentEmployee, employee),
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] as string
+        });
+
         res.json(employee);
     } catch (error: any) {
         console.error('Update employee error:', error);
@@ -257,9 +293,25 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
 
+        const currentEmployee = await prisma.employee.findUnique({ where: { id: id as string } });
+        if (!currentEmployee) return res.status(404).json({ error: 'Employee not found' });
+
         const employee = await prisma.employee.update({
             where: { id: id as string },
             data: { workStatus: 'RESIGNED' }
+        });
+
+        // Audit Log for DELETE (Soft delete)
+        await auditService.log({
+            tableName: 'Employee',
+            recordId: employee.id,
+            action: 'DELETE',
+            userId: req.user!.id,
+            oldValues: currentEmployee,
+            newValues: employee,
+            reason: 'Marked as resigned',
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] as string
         });
 
         res.json({ message: 'Employee marked as resigned', employee });

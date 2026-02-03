@@ -17,8 +17,8 @@ interface UseDraggableColumnsProps {
   userId?: string;
 }
 
-export function useDraggableColumns({ 
-  defaultColumns, 
+export function useDraggableColumns({
+  defaultColumns,
   storageKey,
   userId = 'default'
 }: UseDraggableColumnsProps) {
@@ -76,9 +76,9 @@ interface DraggableColumnHeaderProps {
   renderSortIcon?: (field: string) => React.ReactNode;
 }
 
-export function DraggableColumnHeader({ 
-  column, 
-  index, 
+export function DraggableColumnHeader({
+  column,
+  index,
   moveColumn,
   onSort,
   sortField,
@@ -86,14 +86,11 @@ export function DraggableColumnHeader({
   renderSortIcon
 }: DraggableColumnHeaderProps) {
   const ref = useRef<HTMLTableCellElement>(null);
-  const dragItemRef = useRef<{ index: number } | null>(null);
-
   // Native HTML5 Drag & Drop handlers
   const handleDragStart = (e: React.DragEvent) => {
-    dragItemRef.current = { index };
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', '');
-    
+    e.dataTransfer.setData('column-index', index.toString());
+
     // Add dragging visual feedback
     if (ref.current) {
       ref.current.style.opacity = '0.4';
@@ -101,8 +98,6 @@ export function DraggableColumnHeader({
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
-    dragItemRef.current = null;
-    
     // Reset visual feedback
     if (ref.current) {
       ref.current.style.opacity = '1';
@@ -129,24 +124,25 @@ export function DraggableColumnHeader({
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    
+
     if (ref.current) {
       ref.current.classList.remove('bg-blue-100');
     }
 
-    if (dragItemRef.current) {
-      const dragIndex = dragItemRef.current.index;
+    const dragIndexStr = e.dataTransfer.getData('column-index');
+    if (dragIndexStr) {
+      const dragIndex = parseInt(dragIndexStr, 10);
       const hoverIndex = index;
-      
+
       if (dragIndex !== hoverIndex) {
         moveColumn(dragIndex, hoverIndex);
       }
     }
   };
 
-  const alignClass = 
+  const alignClass =
     column.align === 'center' ? 'text-center' :
-    column.align === 'right' ? 'text-right' : 'text-left';
+      column.align === 'right' ? 'text-right' : 'text-left';
 
   const canSort = column.sortable && column.field && onSort;
 

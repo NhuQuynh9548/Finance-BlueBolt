@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { auditService } from '../services/auditService';
 
 const router = Router();
 
@@ -61,7 +62,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
         // Generate JWT token
         const secret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
-        const expiresIn = process.env.JWT_EXPIRES_IN || '24h';
+        const expiresIn = (process.env.JWT_EXPIRES_IN || '24h') as any;
 
         const token = jwt.sign(
             {
@@ -73,6 +74,16 @@ router.post('/login', async (req: Request, res: Response) => {
             secret,
             { expiresIn }
         );
+
+        // Audit Log for LOGIN
+        await auditService.log({
+            tableName: 'User',
+            recordId: user.id,
+            action: 'LOGIN',
+            userId: user.id,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] as string
+        });
 
         // Return user data (without password)
         const { password: _, ...userWithoutPassword } = user;
@@ -142,8 +153,18 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
 });
 
 // POST /api/auth/logout
-router.post('/logout', authenticate, (req: Request, res: Response) => {
+router.post('/logout', authenticate, async (req: AuthRequest, res: Response) => {
     // With JWT, logout is handled client-side by removing the token
+    if (req.user) {
+        await auditService.log({
+            tableName: 'User',
+            recordId: req.user.id,
+            action: 'LOGOUT',
+            userId: req.user.id,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] as string
+        });
+    }
     res.json({ message: 'Logged out successfully' });
 });
 
@@ -181,6 +202,8 @@ router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => 
 
         const { name, fullName, avatar } = req.body;
 
+        const currentProfile = await prisma.user.findUnique({ where: { id: req.user.id } });
+
         const updatedUser = await prisma.user.update({
             where: { id: req.user.id },
             data: {
@@ -192,6 +215,18 @@ router.put('/profile', authenticate, async (req: AuthRequest, res: Response) => 
                 businessUnit: true,
                 role: true
             }
+        });
+
+        // Audit Log for UPDATE
+        await auditService.log({
+            tableName: 'User',
+            recordId: req.user.id,
+            action: 'UPDATE',
+            userId: req.user.id,
+            oldValues: currentProfile,
+            newValues: updatedUser,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] as string
         });
 
         const { password: _, ...userWithoutPassword } = updatedUser;
@@ -269,6 +304,17 @@ router.post('/change-password', authenticate, async (req: AuthRequest, res: Resp
         await prisma.user.update({
             where: { id: req.user.id },
             data: { password: hashedPassword }
+        });
+
+        // Audit Log for Change Password
+        await auditService.log({
+            tableName: 'User',
+            recordId: req.user.id,
+            action: 'UPDATE',
+            userId: req.user.id,
+            reason: 'Đổi mật khẩu',
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] as string
         });
 
         res.json({ message: 'Đổi mật khẩu thành công' });

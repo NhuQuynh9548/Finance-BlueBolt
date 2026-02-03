@@ -118,7 +118,7 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
 router.get('/revenue-chart', async (req: AuthRequest, res: Response) => {
     try {
         const user = req.user!;
-        const { buId, period, startDate, endDate } = req.query; // period: 'year' | 'month' | 'quarter'
+        const { buId, period, startDate, endDate } = req.query; // period: 'year' | 'month' | 'quarter' | 'custom'
 
         let targetBuId: string | undefined = undefined;
         let targetBuName: string | undefined = undefined;
@@ -156,10 +156,6 @@ router.get('/revenue-chart', async (req: AuthRequest, res: Response) => {
             include: { allocationPreviews: true }
         });
 
-        // Grouping logic based on period
-        // Format: { groupKey: { label: string, sortKey: number, thu: number, chi: number, vay: number, loiNhuan: number } }
-        const chartDataMap: { [key: string]: { label: string; sortKey: number; thu: number; chi: number; vay: number; loiNhuan: number } } = {};
-
         // Helper to get ISO week number
         const getWeekNumber = (d: Date) => {
             d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -169,33 +165,63 @@ router.get('/revenue-chart', async (req: AuthRequest, res: Response) => {
             return weekNo;
         };
 
-        // Pre-fill labels based on period and range
+        // Determine effective grouping period
         const start = startDate ? new Date(startDate as string) : new Date(new Date().getFullYear(), 0, 1);
         const end = endDate ? new Date(endDate as string) : new Date(new Date().getFullYear(), 11, 31);
 
+        let effectivePeriod = period as string;
+        if (effectivePeriod === 'custom') {
+            const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+            if (diffDays <= 45) {
+                effectivePeriod = 'week';
+            } else if (diffDays <= 180) {
+                effectivePeriod = 'month';
+            } else {
+                effectivePeriod = 'quarter_group';
+            }
+        } else if (effectivePeriod === 'month' || effectivePeriod === 'quarter') {
+            effectivePeriod = 'week'; // Standard month/quarter view shows by week
+        }
+
+        const chartDataMap: { [key: string]: { label: string; sortKey: number; thu: number; chi: number; vay: number; loiNhuan: number } } = {};
+
+        // Pre-fill labels based on effective period
         const currentIter = new Date(start);
         while (currentIter <= end) {
             let groupKey = '';
             let label = '';
             let sortKey = 0;
 
-            if (period === 'month' || period === 'quarter') {
+            if (effectivePeriod === 'week') {
                 const weekNum = getWeekNumber(currentIter);
                 groupKey = `${currentIter.getFullYear()}-W${weekNum}`;
                 label = `Tuần ${weekNum}`;
                 sortKey = new Date(currentIter.getFullYear(), currentIter.getMonth(), currentIter.getDate()).getTime();
-
-                // Increment by 1 week
                 currentIter.setDate(currentIter.getDate() + 7);
-            } else {
+            } else if (effectivePeriod === 'month') {
                 const month = currentIter.getMonth() + 1;
                 const year = currentIter.getFullYear();
                 groupKey = `${year}-${month.toString().padStart(2, '0')}`;
-                label = `T${month}/${year.toString().slice(2)}`;
+                label = `Tháng ${month.toString().padStart(2, '0')}/${year}`;
                 sortKey = new Date(year, currentIter.getMonth(), 1).getTime();
-
-                // Increment by 1 month
                 currentIter.setMonth(currentIter.getMonth() + 1);
+            } else { // quarter_group or year
+                const q = Math.floor(currentIter.getMonth() / 3) + 1;
+                const year = currentIter.getFullYear();
+
+                if (effectivePeriod === 'quarter_group') {
+                    groupKey = `${year}-Q${q}`;
+                    label = `Quý ${q}/${year}`;
+                    sortKey = new Date(year, (q - 1) * 3, 1).getTime();
+                    currentIter.setMonth(currentIter.getMonth() + 3);
+                } else {
+                    // Default to month grouping for Year view but with full name label
+                    const month = currentIter.getMonth() + 1;
+                    groupKey = `${year}-${month.toString().padStart(2, '0')}`;
+                    label = `Tháng ${month.toString().padStart(2, '0')}/${year.toString().slice(2)}`;
+                    sortKey = new Date(year, currentIter.getMonth(), 1).getTime();
+                    currentIter.setMonth(currentIter.getMonth() + 1);
+                }
             }
 
             if (!chartDataMap[groupKey]) {
@@ -207,9 +233,16 @@ router.get('/revenue-chart', async (req: AuthRequest, res: Response) => {
             const date = new Date(t.transactionDate);
             let groupKey = '';
 
-            if (period === 'month' || period === 'quarter') {
+            if (effectivePeriod === 'week') {
                 const weekNum = getWeekNumber(date);
                 groupKey = `${date.getFullYear()}-W${weekNum}`;
+            } else if (effectivePeriod === 'month') {
+                const month = date.getMonth() + 1;
+                const year = date.getFullYear();
+                groupKey = `${year}-${month.toString().padStart(2, '0')}`;
+            } else if (effectivePeriod === 'quarter_group') {
+                const q = Math.floor(date.getMonth() / 3) + 1;
+                groupKey = `${date.getFullYear()}-Q${q}`;
             } else {
                 const month = date.getMonth() + 1;
                 const year = date.getFullYear();
@@ -302,9 +335,9 @@ router.get('/expense-chart', async (req: AuthRequest, res: Response) => {
             orderBy: { name: 'asc' }
         });
 
-        const categoryData: { [key: string]: number } = {};
+        const categoryData: { [key: string]: { id: string, amount: number } } = {};
         allCategories.forEach(cat => {
-            categoryData[cat.name] = 0;
+            categoryData[cat.name] = { id: cat.id, amount: 0 };
         });
 
         let totalExpense = 0;
@@ -313,18 +346,25 @@ router.get('/expense-chart', async (req: AuthRequest, res: Response) => {
             const amount = getTransactionAmountForBU(t, targetBuId, targetBuName);
             const categoryName = t.category.name;
 
-            categoryData[categoryName] = (categoryData[categoryName] || 0) + amount;
+            if (categoryData[categoryName]) {
+                categoryData[categoryName].amount += amount;
+            } else {
+                // Fallback for categories not in allCategories list for some reason
+                categoryData[categoryName] = { id: t.category.id, amount: amount };
+            }
             totalExpense += amount;
         });
 
         // Convert to array
         const result = Object.entries(categoryData)
-            .map(([name, value]) => ({
+            .map(([name, data]) => ({
+                id: data.id,
                 name,
-                value,
-                percentage: totalExpense > 0 ? (value / totalExpense) * 100 : 0
+                value: data.amount,
+                percentage: totalExpense > 0 ? (data.amount / totalExpense) * 100 : 0
             }))
-            .sort((a, b) => b.value - a.value); // Keep sorted by value primarily
+            .filter(item => item.value > 0) // Only show categories with data
+            .sort((a, b) => b.value - a.value);
 
         res.json(result);
 

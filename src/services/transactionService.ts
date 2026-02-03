@@ -1,7 +1,7 @@
 import api from './api';
 
 export const transactionService = {
-    async getAll(filters?: { buId?: string; type?: string; status?: string; dateFrom?: string; dateTo?: string }) {
+    async getAll(filters?: { buId?: string; type?: string; status?: string; dateFrom?: string; dateTo?: string; categoryId?: string }) {
         const response = await api.get('/transactions', { params: filters });
         return response.data;
     },

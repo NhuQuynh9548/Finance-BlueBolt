@@ -20,7 +20,8 @@ import {
   Briefcase,
   Award,
   UserCog,
-  CreditCard
+  CreditCard,
+  ClipboardList
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 
@@ -97,10 +98,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           path: '/admin/bao-mat'
         },
         {
-          id: 'admin-logs',
-          label: 'Nhật ký hệ thống',
-          icon: <FileText className="w-4 h-4" />,
-          path: '/admin/nhat-ky'
+          id: 'admin-audit',
+          label: 'Nhật ký kiểm soát',
+          icon: <ClipboardList className="w-4 h-4" />,
+          path: '/admin/audit-logs'
         }
       ]
     },

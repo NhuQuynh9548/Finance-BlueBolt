@@ -123,10 +123,21 @@ export function QuanLyDoiTac() {
     userId: 'user_001'
   });
 
-  // Fetch Data
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Update partnerId when type changes (only in Create mode)
+  useEffect(() => {
+    if (modalMode === 'create' && formData.partnerType) {
+      const type = formData.partnerType;
+      const filtered = partners.filter(p => p.partnerType === type);
+      const prefix = type === 'CUSTOMER' ? 'KH' : type === 'SUPPLIER' ? 'NCC' : 'DT';
+      const newId = `${prefix}${String(filtered.length + 1).padStart(3, '0')}`;
+
+      setFormData(prev => ({ ...prev, partnerId: newId }));
+    }
+  }, [formData.partnerType, modalMode, partners]);
 
   // Debounce search
   useEffect(() => {
@@ -215,11 +226,15 @@ export function QuanLyDoiTac() {
 
   // CRUD Operations
   const handleCreate = () => {
+    const defaultType = 'CUSTOMER';
+    const filtered = partners.filter(p => p.partnerType === defaultType);
+    const initialId = `KH${String(filtered.length + 1).padStart(3, '0')}`;
+
     setModalMode('create');
     setSelectedPartner(null);
     setActiveTab('info');
     setFormData({
-      partnerId: `PT${String(partners.length + 1).padStart(3, '0')}`, // Rudimentary ID gen, backend generates UUID
+      partnerId: initialId,
       partnerName: '',
       partnerType: 'CUSTOMER',
       taxCode: '',
@@ -617,23 +632,24 @@ export function QuanLyDoiTac() {
 
       {/* Create/View/Edit Modal - 360° View */}
       {modalMode && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
-            <div className="border-b border-gray-200 px-6 py-5">
+        <div className="fixed inset-0 bg-black/40 z-[999999] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+            <div className="border-b border-gray-200 px-6 py-5 bg-white">
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-xl font-bold text-gray-800">
                     {modalMode === 'create' && 'Thêm Đối Tác Mới'}
-                    {modalMode === 'view' && 'Xem Thông Tin Đối Tác (360° View)'}
+                    {modalMode === 'view' && 'Xem Thông Tin Đối Tác'}
                     {modalMode === 'edit' && 'Chỉnh Sửa Thông Tin Đối Tác'}
                   </h2>
                   <p className="text-sm text-gray-500 mt-1">
-                    {modalMode === 'view' ? 'Thông tin chi tiết đối tác' : 'Vui lòng điền đầy đủ thông tin bên dưới'}
+                    {modalMode === 'view' ? 'Thông tin chi tiết đối tác (360° View)' : 'Vui lòng điền đầy đủ thông tin bên dưới'}
                   </p>
                 </div>
                 <button
                   onClick={() => setModalMode(null)}
                   className="p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
+                  aria-label="Close"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -643,18 +659,18 @@ export function QuanLyDoiTac() {
               <div className="flex gap-4 mt-4">
                 <button
                   onClick={() => setActiveTab('info')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'info'
-                    ? 'bg-[#004aad] text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${activeTab === 'info'
+                    ? 'bg-[#004aad]/10 text-[#004aad] shadow-sm'
+                    : 'text-gray-500 hover:bg-gray-50'
                     }`}
                 >
                   Thông tin chung
                 </button>
                 <button
                   onClick={() => setActiveTab('contracts')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'contracts'
-                    ? 'bg-[#004aad] text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${activeTab === 'contracts'
+                    ? 'bg-[#004aad]/10 text-[#004aad] shadow-sm'
+                    : 'text-gray-500 hover:bg-gray-50'
                     }`}
                 >
                   Hợp đồng & Lịch sử
@@ -680,7 +696,7 @@ export function QuanLyDoiTac() {
                             type="text"
                             value={formData.partnerId}
                             disabled
-                            placeholder="PT-Auto"
+                            placeholder="DT/KH/NCC-Auto"
                             className="w-full px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed"
                           />
                         </div>
@@ -1034,21 +1050,22 @@ export function QuanLyDoiTac() {
               </form>
             </div>
 
-            <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3 bg-gray-50">
+            <div className="border-t border-gray-200 px-6 py-4 flex justify-center gap-3 bg-white">
               <button
                 type="button"
                 onClick={() => setModalMode(null)}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                className="px-8 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium min-w-[140px]"
               >
-                Đóng
+                {modalMode === 'view' ? 'Đóng' : 'Hủy bỏ'}
               </button>
               {!isReadOnly && (
                 <button
                   type="submit"
                   form="partner-form"
-                  className="px-6 py-2 bg-[#004aad] text-white rounded-lg hover:bg-[#1557A0] transition-colors shadow-sm"
+                  className="px-8 py-2.5 bg-[#004aad] text-white rounded-lg hover:bg-[#1557A0] transition-colors font-medium min-w-[140px] shadow-sm flex items-center justify-center gap-2"
                 >
-                  {modalMode === 'create' ? 'Tạo Đối Tác' : 'Lưu Thay Đổi'}
+                  <FileText className="w-4 h-4" />
+                  {modalMode === 'create' ? 'Tạo đối tác' : 'Lưu thay đổi'}
                 </button>
               )}
             </div>
@@ -1058,30 +1075,40 @@ export function QuanLyDoiTac() {
       }
 
       {/* Deactivate Confirm Modal */}
-      {
-        showDeactivateConfirm && (
-          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
-              <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận ngừng hợp tác</h3>
-              <p className="text-gray-600 mb-6">Bạn có chắc chắn muốn ngừng hợp tác với đối tác <b>{deactivatingPartner?.partnerName}</b>?</p>
-              <div className="flex justify-end gap-3">
+      {showDeactivateConfirm && (
+        <div className="fixed inset-0 bg-black/40 z-[999999] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 overflow-hidden">
+            <div className="p-8">
+              <div className="flex flex-col items-center text-center gap-4 mb-6">
+                <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-red-600">
+                  <AlertCircle className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800">Xác nhận ngừng hợp tác</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Bạn có chắc chắn muốn ngừng hợp tác với đối tác <b>{deactivatingPartner?.partnerName}</b>?
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
                 <button
                   onClick={() => setShowDeactivateConfirm(false)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
                 >
-                  Hủy
+                  Hủy bỏ
                 </button>
                 <button
                   onClick={confirmDeactivate}
-                  className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg"
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-bold shadow-lg shadow-red-100"
                 >
                   Xác nhận
                 </button>
               </div>
             </div>
           </div>
-        )
-      }
+        </div>
+      )}
     </div >
   );
 }

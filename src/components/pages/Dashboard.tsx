@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { TrendingUp, TrendingDown, DollarSign, Percent, Eye, X, BarChart3, Filter, Calendar } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useApp } from '../../contexts/AppContext';
 import { dashboardService } from '../../services/dashboardService';
+import { transactionService } from '../../services/transactionService';
 
 export function Dashboard() {
   const { selectedBU, canSelectBU, currentUser, availableBUs } = useApp();
@@ -20,6 +22,12 @@ export function Dashboard() {
   const [filterTimeRange, setFilterTimeRange] = useState<string>('year');
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
+
+  // Category Detail Modal States
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<any>(null);
+  const [categoryTransactions, setCategoryTransactions] = useState<any[]>([]);
+  const [loadingCategoryData, setLoadingCategoryData] = useState(false);
 
   // Helper to format date for API (YYYY-MM-DD)
   const formatDateForApi = (date: Date) => {
@@ -110,6 +118,49 @@ export function Dashboard() {
 
     fetchData();
   }, [selectedBU, filterTimeRange, customStartDate, customEndDate]);
+
+  // Handle view Category Detail from chart
+  const handleCategoryClick = async (data: any) => {
+    // Recharts passes different objects for Pie slice clicks vs Legend matches
+    // Slice click: data.payload contains the item
+    // Custom button/Legend: data is the item itself
+    const item = data.payload || data;
+    const categoryId = item.id || item.categoryId;
+
+    if (!categoryId) {
+      console.warn("No category ID found in clicked item:", data);
+      return;
+    }
+
+    setSelectedCategory(item);
+    setShowCategoryModal(true);
+    setLoadingCategoryData(true);
+
+    try {
+      const range = getDateRange();
+      const dateRangeStr = {
+        dateFrom: formatDateForApi(range.start),
+        dateTo: formatDateForApi(range.end)
+      };
+
+      const filters: any = {
+        ...dateRangeStr,
+        categoryId: categoryId,
+        type: 'EXPENSE',
+        status: 'APPROVED'
+      };
+
+      if (selectedBU !== 'all') filters.buId = selectedBU;
+
+      const txns = await transactionService.getAll(filters);
+      setCategoryTransactions(txns);
+    } catch (e) {
+      console.error(e);
+      setCategoryTransactions([]);
+    } finally {
+      setLoadingCategoryData(false);
+    }
+  };
 
   // Handle view BU detail
   const handleViewBUDetail = async (bu: any) => {
@@ -373,7 +424,20 @@ export function Dashboard() {
         <div className="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
           <div className="mb-6">
             <h2 className="text-xl font-bold text-gray-800 mb-1">Xu hướng Dòng tiền</h2>
-            <p className="text-sm text-gray-600">Theo dõi thu chi, vay và lợi nhuận theo {filterTimeRange === 'year' ? 'tháng' : 'tuần'}</p>
+            <p className="text-sm text-gray-600">
+              Theo dõi thu chi, vay và lợi nhuận theo {
+                filterTimeRange === 'year' ? 'tháng' :
+                  filterTimeRange === 'custom' ? (
+                    (() => {
+                      const range = getDateRange();
+                      const diffDays = Math.ceil((range.end.getTime() - range.start.getTime()) / (1000 * 60 * 60 * 24));
+                      if (diffDays <= 45) return 'tuần';
+                      if (diffDays <= 180) return 'tháng';
+                      return 'quý';
+                    })()
+                  ) : 'tuần'
+              }
+            </p>
           </div>
 
           {revenueData.length > 0 ? (
@@ -472,6 +536,8 @@ export function Dashboard() {
                     paddingAngle={2}
                     dataKey="value"
                     label={renderCustomLabel}
+                    onClick={(data) => handleCategoryClick(data)}
+                    style={{ cursor: 'pointer' }}
                   >
                     {expenseData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={getCategoryColor(entry.name, index)} />
@@ -492,16 +558,23 @@ export function Dashboard() {
               {/* Legend */}
               <div className="mt-4 space-y-2">
                 {expenseData.map((category, index) => (
-                  <div key={index} className="flex items-center justify-between text-sm">
+                  <button
+                    key={index}
+                    onClick={() => handleCategoryClick(category)}
+                    className="w-full flex items-center justify-between text-sm p-1.5 hover:bg-gray-50 rounded-lg transition-colors group"
+                  >
                     <div className="flex items-center gap-2">
                       <div
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: getCategoryColor(category.name, index) }}
                       ></div>
-                      <span className="text-gray-700">{category.name}</span>
+                      <span className="text-gray-700 group-hover:text-blue-600 transition-colors">{category.name}</span>
                     </div>
-                    <span className="font-semibold text-gray-800">{formatCurrency(category.value)}</span>
-                  </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-800">{formatCurrency(category.value)}</span>
+                      <Eye className="w-4 h-4 text-gray-300 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all" />
+                    </div>
+                  </button>
                 ))}
               </div>
             </>
@@ -815,6 +888,110 @@ export function Dashboard() {
           </div>
         );
       })()}
+
+      {showCategoryModal && createPortal(
+        <div
+          className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/40 p-4 animate-in fade-in duration-300"
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="border-b border-gray-200 px-6 py-5 flex items-start justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">
+                  {selectedCategory?.name}
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  {selectedBUName} • {(() => {
+                    const range = getDateRange();
+                    return `${range.start.toLocaleDateString('vi-VN')} - ${range.end.toLocaleDateString('vi-VN')}`;
+                  })()}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCategoryModal(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content Area */}
+            <div className="overflow-y-auto max-h-[calc(90vh-180px)] px-6 py-6">
+              {loadingCategoryData ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                  <div className="w-10 h-10 border-4 border-gray-100 border-t-[#004aad] rounded-full animate-spin"></div>
+                  <p className="text-gray-400 font-medium">Đang tải dữ liệu...</p>
+                </div>
+              ) : categoryTransactions.length > 0 ? (
+                <div className="overflow-hidden border border-gray-100 rounded-xl bg-white shadow-sm">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-bold text-gray-700">Ngày</th>
+                        <th className="px-4 py-3 text-left font-bold text-gray-700">Mã giao dịch</th>
+                        <th className="px-4 py-3 text-left font-bold text-gray-700">BU</th>
+                        <th className="px-4 py-3 text-right font-bold text-gray-700">Số tiền</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {categoryTransactions.map((txn) => (
+                        <tr key={txn.id} className="hover:bg-blue-50/50 transition-colors">
+                          <td className="px-4 py-3 whitespace-nowrap text-gray-600">
+                            {new Date(txn.transactionDate).toLocaleDateString('vi-VN')}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="font-mono text-[11px] font-bold text-[#004aad] bg-blue-50 px-2 py-1 rounded border border-blue-100">
+                              {txn.transactionCode}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-gray-600">
+                            {txn.businessUnit?.name || '-'}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-right font-bold text-red-600 tabular-nums">
+                            {formatCurrency(txn.amount)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-gray-50 border-t-2 border-gray-100">
+                      <tr className="font-bold text-gray-900">
+                        <td colSpan={3} className="px-4 py-4 text-right text-xs uppercase tracking-wider">Tổng cộng:</td>
+                        <td className="px-4 py-4 text-right text-red-600 text-base">
+                          {formatCurrency(categoryTransactions.reduce((sum, t) => sum + t.amount, 0))}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-50">
+                  <BarChart3 className="w-12 h-12 text-gray-300" />
+                  <p className="text-gray-500 font-medium">Không tìm thấy giao dịch nào.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-gray-200 px-6 py-4 flex justify-center gap-3 bg-white">
+              <button
+                onClick={() => setShowCategoryModal(false)}
+                className="px-8 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium min-w-[140px]"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={() => setShowCategoryModal(false)}
+                className="px-8 py-2.5 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
     </div>
   );
 }

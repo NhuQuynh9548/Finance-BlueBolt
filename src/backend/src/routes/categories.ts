@@ -1,11 +1,28 @@
 import { Router, Response } from 'express';
 import prisma from '../utils/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { auditService } from '../services/auditService';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
+
+// Helper function to calculate differences between objects
+function getChanges(oldVal: any, newVal: any) {
+    const changes: any = {};
+    if (!oldVal || !newVal) return null;
+
+    Object.keys(newVal).forEach(key => {
+        if (JSON.stringify(oldVal[key]) !== JSON.stringify(newVal[key])) {
+            changes[key] = {
+                old: oldVal[key],
+                new: newVal[key]
+            };
+        }
+    });
+    return Object.keys(changes).length > 0 ? changes : null;
+}
 
 // GET /api/categories
 router.get('/', async (req: AuthRequest, res: Response) => {
@@ -59,6 +76,17 @@ router.post('/', async (req: AuthRequest, res: Response) => {
             }
         });
 
+        // Audit Log for CREATE
+        await auditService.log({
+            tableName: 'Category',
+            recordId: category.id,
+            action: 'CREATE',
+            userId: req.user!.id,
+            newValues: category,
+            ipAddress: req.ip as string,
+            userAgent: req.headers['user-agent'] as string
+        });
+
         res.status(201).json(category);
     } catch (error) {
         console.error('Create category error:', error);
@@ -72,6 +100,9 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
         const { id } = req.params;
         const { code, name, type, description, status } = req.body;
 
+        const currentCategory = await prisma.category.findUnique({ where: { id } });
+        if (!currentCategory) return res.status(404).json({ error: 'Category not found' });
+
         const category = await prisma.category.update({
             where: { id },
             data: {
@@ -81,6 +112,19 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
                 description,
                 status: status.toUpperCase()
             }
+        });
+
+        // Audit Log for UPDATE
+        await auditService.log({
+            tableName: 'Category',
+            recordId: category.id,
+            action: 'UPDATE',
+            userId: req.user!.id,
+            oldValues: currentCategory,
+            newValues: category,
+            changes: getChanges(currentCategory, category),
+            ipAddress: req.ip as string,
+            userAgent: req.headers['user-agent'] as string
         });
 
         res.json(category);
@@ -95,8 +139,22 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
 
+        const currentCategory = await prisma.category.findUnique({ where: { id } });
+        if (!currentCategory) return res.status(404).json({ error: 'Category not found' });
+
         await prisma.category.delete({
             where: { id }
+        });
+
+        // Audit Log for DELETE
+        await auditService.log({
+            tableName: 'Category',
+            recordId: id,
+            action: 'DELETE',
+            userId: req.user!.id,
+            oldValues: currentCategory,
+            ipAddress: req.ip as string,
+            userAgent: req.headers['user-agent'] as string
         });
 
         res.json({ message: 'Category deleted successfully' });

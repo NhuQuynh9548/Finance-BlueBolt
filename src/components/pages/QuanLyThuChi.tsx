@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 // Force re-compilation
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, Plus, Eye, Edit2, Trash2, DollarSign, X, AlertCircle, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Save, Calendar, Building2, FileText, Paperclip, TrendingUp, TrendingDown, RefreshCw, ChevronDown, ChevronUp, User, Users, Upload, Printer, Send, CheckCircle, XCircle, Image as ImageIcon, ExternalLink, Briefcase, RotateCcw, Settings, GripVertical, Layers, Download, History } from 'lucide-react';
@@ -61,6 +62,7 @@ interface Transaction {
   attachments?: TransactionFile[];
   allocationRuleId?: string;
   isAdvance: boolean;
+  costAllocation?: 'DIRECT' | 'INDIRECT';
   rejectionReason?: string;
 }
 
@@ -80,16 +82,17 @@ interface ColumnConfig {
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: 'transactionDate', label: 'Ngày CT', sortable: true, align: 'left', width: 120, visible: true },
   { id: 'transactionCode', label: 'Mã GD', sortable: true, align: 'left', width: 120, visible: true },
+  { id: 'businessUnit', label: 'Đơn vị (BU)', sortable: false, align: 'left', width: 150, visible: true },
   { id: 'category', label: 'Danh mục', sortable: false, align: 'left', width: 150, visible: true },
   { id: 'transactionType', label: 'Loại', sortable: false, align: 'left', width: 100, visible: true },
   { id: 'objectName', label: 'Đối tượng', sortable: false, align: 'left', width: 150, visible: true },
-  { id: 'paymentMethod', label: 'PT Thanh Toán', sortable: false, align: 'left', width: 140, visible: true },
-  { id: 'businessUnit', label: 'Đơn vị (BU)', sortable: false, align: 'left', width: 150, visible: true },
   { id: 'project', label: 'Dự án', sortable: false, align: 'left', width: 150, visible: true },
   { id: 'amount', label: 'Số tiền', sortable: true, align: 'right', width: 140, visible: true },
+  { id: 'paymentMethod', label: 'PT Thanh Toán', sortable: false, align: 'left', width: 140, visible: true },
   { id: 'paymentStatus', label: 'TT', sortable: false, align: 'left', width: 130, visible: true },
-  { id: 'creator', label: 'Người tạo', sortable: false, align: 'left', width: 140, visible: true },
   { id: 'approvalStatus', label: 'Phê duyệt', sortable: false, align: 'left', width: 130, visible: true },
+  { id: 'creator', label: 'Người tạo', sortable: false, align: 'left', width: 140, visible: true },
+  { id: 'description', label: 'Ghi chú', sortable: false, align: 'left', width: 250, visible: true },
   { id: 'actions', label: 'Hành động', sortable: false, align: 'center', width: 120, visible: true },
 ];
 
@@ -135,7 +138,7 @@ export function QuanLyThuChi() {
   const [sortField, setSortField] = useState<SortField | null>('transactionCode');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 15;
+  const itemsPerPage = 10;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
 
@@ -149,6 +152,15 @@ export function QuanLyThuChi() {
   const [showAuditLog, setShowAuditLog] = useState(false);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+
+  // Helper to get absolute backend URL
+  const getAbsoluteUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    const baseUrl = (import.meta as any).env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    return `${baseUrl}${url}`;
+  };
 
 
   // Load columns from localStorage on mount
@@ -214,6 +226,49 @@ export function QuanLyThuChi() {
 
   const formatNumber = (amount: number) => {
     return new Intl.NumberFormat('vi-VN').format(amount);
+  };
+
+  const toggleNote = (id: string) => {
+    setExpandedNotes(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const renderDescription = (txn: Transaction) => {
+    if (!txn.description) return '-';
+    const words = txn.description.trim().split(/\s+/);
+    const isExpanded = expandedNotes.has(txn.id);
+
+    if (words.length <= 6) return txn.description;
+
+    if (isExpanded) {
+      return (
+        <div className="text-gray-700">
+          {txn.description}
+          <button
+            onClick={() => toggleNote(txn.id)}
+            className="ml-1 text-blue-600 hover:text-blue-800 font-medium text-[11px] underline"
+          >
+            Thu gọn
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="text-gray-700">
+        {words.slice(0, 6).join(' ')}
+        <button
+          onClick={() => toggleNote(txn.id)}
+          className="ml-1 text-blue-600 hover:text-blue-800 font-medium text-[11px] underline"
+        >
+          ...Thêm
+        </button>
+      </div>
+    );
   };
 
   // Fetch Data
@@ -460,28 +515,14 @@ export function QuanLyThuChi() {
     return matchCode || matchDesc || matchPartner || matchEmployee;
   });
 
-  // Sorting - Flexible based on filter type
+  // Sorting - Flexible based on user selection
   const sortedTransactions = [...filteredTransactions].sort((a, b) => {
-    // When viewing "Tất cả", sort by newest first (transactionDate descending)
-    if (filterType === 'all') {
-      const dateA = new Date(a.transactionDate).getTime();
-      const dateB = new Date(b.transactionDate).getTime();
-      return dateB - dateA; // Newest first
-    }
-
-    // When filtering by INCOME, EXPENSE, or LOAN, sort by transactionCode ascending
-    if (filterType === 'INCOME' || filterType === 'EXPENSE' || filterType === 'LOAN') {
-      const codeA = a.transactionCode || '';
-      const codeB = b.transactionCode || '';
-      return codeA.localeCompare(codeB); // Ascending order
-    }
-
-    // Fallback to manual sorting if sortField and sortOrder are set
     if (!sortField || !sortOrder) return 0;
 
-    let valA: any = a[sortField];
-    let valB: any = b[sortField];
+    let valA: any = (a as any)[sortField];
+    let valB: any = (b as any)[sortField];
 
+    // Handle nested values if needed (though current sortField items are top-level)
     if (sortField === 'transactionDate') {
       valA = new Date(valA).getTime();
       valB = new Date(valB).getTime();
@@ -498,11 +539,15 @@ export function QuanLyThuChi() {
 
   // Handlers
   const handleCreate = (type: 'INCOME' | 'EXPENSE' | 'LOAN') => {
-    const prefix = type === 'INCOME' ? 'T' : type === 'EXPENSE' ? 'C' : 'V';
+    const selectedBUId = (selectedBU !== 'all' ? selectedBU : (businessUnits.length > 0 ? businessUnits[0].id : ''));
+    const bu = businessUnits.find(b => b.id === selectedBUId);
+    const buCode = bu?.code || 'BU';
+
+    const typePrefix = type === 'INCOME' ? 'PT' : type === 'EXPENSE' ? 'PC' : 'PV';
     const now = new Date();
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     const yy = String(now.getFullYear()).slice(-2);
-    const tempCode = `${prefix}${mm}${yy}_01`;
+    const tempCode = `${buCode}_${typePrefix}${mm}${yy}_001`;
 
     setModalMode('create');
     setModalType(type);
@@ -630,6 +675,15 @@ export function QuanLyThuChi() {
         uploadedAttachments = await uploadService.uploadFiles(selectedFiles);
       }
 
+      // Merge existing attachments and newly uploaded ones
+      const existingAttachments = formData.attachments || [];
+      const allAttachments = [...existingAttachments, ...uploadedAttachments].map(att => ({
+        fileName: att.fileName,
+        fileSize: att.fileSize,
+        fileType: att.fileType,
+        fileUrl: att.fileUrl
+      }));
+
       // 2. Prepare Payload (Force DIRECT allocation)
       const payload: any = {
         ...formData,
@@ -640,7 +694,7 @@ export function QuanLyThuChi() {
           : new Date().toISOString(), // Default to today if not set
         amount: Number(formData.amount),
         approvalStatus: 'APPROVED',
-        attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+        attachments: allAttachments.length > 0 ? allAttachments : undefined,
         allocationPreviews: undefined
       };
 
@@ -699,6 +753,29 @@ export function QuanLyThuChi() {
       alert('Lưu giao dịch thất bại: ' + (err.response?.data?.error || err.message));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadFile = async (fileUrl: string, fileName: string) => {
+    try {
+      const absoluteUrl = getAbsoluteUrl(fileUrl);
+      console.log('Downloading file from:', absoluteUrl);
+      const response = await fetch(absoluteUrl);
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Không thể tải xuống file. Vui lòng thử lại sau.');
     }
   };
 
@@ -1225,6 +1302,11 @@ export function QuanLyThuChi() {
                             {txn.transactionCode}
                           </td>
                         );
+                        if (col.id === 'description') return (
+                          <td className="px-6 py-4 text-sm max-w-[300px]">
+                            {renderDescription(txn)}
+                          </td>
+                        );
                         if (col.id === 'category') return <td className="px-6 py-4 text-sm text-gray-700">{txn.category?.name || '-'}</td>;
                         if (col.id === 'transactionType') return <td className="px-6 py-4">
                           <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${txn.transactionType === 'INCOME' ? 'bg-green-50 text-green-700 border-green-200' :
@@ -1346,444 +1428,524 @@ export function QuanLyThuChi() {
       {/* Modal */}
       {modalMode && (
         <div
-          className={`fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 transition-all ${showAuditLog ? 'opacity-30 pointer-events-none blur-[2px]' : 'opacity-100'}`}
+          className={`fixed inset-0 bg-black/40 z-[999998] flex items-center justify-center p-4 transition-all animate-in fade-in duration-300 ${showAuditLog ? 'opacity-30 pointer-events-none blur-[2px]' : 'opacity-100'}`}
         >
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <form onSubmit={handleSubmit} className="p-6">
-              <div className="flex justify-between items-center mb-6 pb-4 border-b">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-800">
-                    {modalMode === 'create' ? `Tạo Phiếu ${modalType === 'INCOME' ? 'Thu' : modalType === 'EXPENSE' ? 'Chi' : 'Vay'} Mới` :
-                      modalMode === 'edit' ? 'Chỉnh Sửa Giao Dịch' : 'Chi Tiết Giao Dịch'}
-                  </h2>
-                  <p className="text-sm text-gray-500 mt-1">Vui lòng điền đầy đủ thông tin bắt buộc (*)</p>
-                </div>
-                <button type="button" onClick={() => setModalMode(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X className="w-5 h-5 text-gray-400 font-bold" /></button>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="border-b border-gray-200 px-6 py-5 flex items-start justify-between bg-white">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">
+                  {modalMode === 'create' ? `Tạo Phiếu ${modalType === 'INCOME' ? 'Thu' : modalType === 'EXPENSE' ? 'Chi' : 'Vay'} Mới` :
+                    modalMode === 'edit' ? 'Chỉnh Sửa Giao Dịch' : 'Chi Tiết Giao Dịch'}
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">Vui lòng điền đầy đủ thông tin bắt buộc (*)</p>
               </div>
+              <button
+                type="button"
+                onClick={() => setModalMode(null)}
+                className="p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-              <div className="space-y-8">
-                {/* SECTION 1: THÔNG TIN GIAO DỊCH */}
-                <div>
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <span className="w-1 h-4 bg-blue-600 rounded-full"></span>
-                    Thông tin giao dịch
-                  </h3>
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-5">
-                    {modalType !== 'INCOME' && modalType !== 'LOAN' && (
-                      <div className="col-span-2 flex items-center gap-2 mb-1">
-                        <input
-                          type="checkbox"
-                          id="isAdvance"
-                          checked={formData.isAdvance || false}
-                          onChange={e => setFormData({ ...formData, isAdvance: e.target.checked })}
-                          disabled={modalMode === 'view'}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <label htmlFor="isAdvance" className="text-sm font-semibold text-gray-700 cursor-pointer">
-                          Đây là phiếu dự chi (Advance Payment)
-                        </label>
-                      </div>
-                    )}
-                    <div>
-                      <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
-                        Mã Giao Dịch (Auto)
-                      </label>
-                      <input
-                        disabled
-                        readOnly
-                        value={formData.transactionCode || ''}
-                        className="w-full px-4 py-2 bg-gray-100 text-gray-500 rounded-lg border border-gray-200 text-sm font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
-                        <span className="text-red-500 font-bold">*</span> Ngày Giao Dịch
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="date"
-                          required
-                          disabled={modalMode === 'view'}
-                          value={formData.transactionDate}
-                          onChange={e => setFormData({ ...formData, transactionDate: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
-                        <span className="text-red-500 font-bold">*</span> Danh Mục
-                      </label>
-                      <div className="relative">
-                        <select
-                          required
-                          disabled={modalMode === 'view' || modalMode === 'edit'}
-                          value={formData.categoryId || ''}
-                          onChange={e => setFormData({ ...formData, categoryId: e.target.value })}
-                          className={`w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none ${modalMode === 'edit' ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'}`}
-                          style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
-                        >
-                          <option value="">Chọn danh mục...</option>
-                          {categories.filter(c => {
-                            const catType = c.type.toUpperCase();
-                            if (modalType === 'INCOME') return catType === 'THU';
-                            if (modalType === 'EXPENSE') return catType === 'CHI';
-                            if (modalType === 'LOAN') return catType === 'VAY';
-                            return false;
-                          }).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
-                        Dự Án
-                      </label>
-                      <input
-                        type="text"
-                        disabled={modalMode === 'view'}
-                        placeholder="Nhập tên dự án..."
-                        value={formData.projectName || ''}
-                        onChange={e => setFormData({ ...formData, projectName: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
-                        <span className="text-red-500 font-bold">*</span> Business Unit
-                      </label>
-                      <div className="relative">
-                        <select
-                          required
-                          disabled={
-                            modalMode === 'view' ||
-                            !canSelectBU ||
-                            formData.costAllocation === 'INDIRECT'
-                          }
-                          value={formData.costAllocation === 'INDIRECT' ? 'indirect' : (formData.businessUnitId || '')}
-                          onChange={e => {
-                            const newBuId = e.target.value;
-                            setFormData({
-                              ...formData,
-                              businessUnitId: newBuId,
-                              partnerId: undefined,
-                              employeeId: undefined
-                            });
-                          }}
-                          className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#004aad] outline-none appearance-none bg-white transition-all disabled:bg-gray-50 disabled:text-gray-500"
-                          style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
-                        >
-                          {formData.costAllocation === 'INDIRECT' ? (
-                            <option value="indirect">--- Phân bổ gián tiếp (Tự động) ---</option>
-                          ) : (
-                            <>
-                              <option value="">Chọn đơn vị (BU)...</option>
-                              {businessUnits.map(bu => (
-                                <option key={bu.id} value={bu.id}>{bu.name}</option>
-                              ))}
-                            </>
-                          )}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                      </div>
-                      {formData.costAllocation === 'INDIRECT' && (
-                        <p className="text-xs text-gray-500 mt-1.5 italic">
-                          💡 BU sẽ được phân bổ tự động theo quy tắc phân bổ gián tiếp
-                        </p>
+            <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="space-y-8">
+                  {/* SECTION 1: THÔNG TIN GIAO DỊCH */}
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <span className="w-1 h-4 bg-blue-600 rounded-full"></span>
+                      Thông tin giao dịch
+                    </h3>
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+                      {modalType !== 'INCOME' && modalType !== 'LOAN' && (
+                        <div className="col-span-2 flex items-center gap-2 mb-1">
+                          <input
+                            type="checkbox"
+                            id="isAdvance"
+                            checked={formData.isAdvance || false}
+                            onChange={e => setFormData({ ...formData, isAdvance: e.target.checked })}
+                            disabled={modalMode === 'view'}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <label htmlFor="isAdvance" className="text-sm font-semibold text-gray-700 cursor-pointer">
+                            Đây là phiếu dự chi (Advance Payment)
+                          </label>
+                        </div>
                       )}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-primary" />
+                          Mã Giao Dịch (Tự Động)
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.transactionCode}
+                          disabled
+                          placeholder="BU_PT0126_001"
+                          className="w-full px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-lg text-gray-500 font-mono text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
+                          <span className="text-red-500 font-bold">*</span> Ngày Giao Dịch
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="date"
+                            required
+                            disabled={modalMode === 'view'}
+                            value={formData.transactionDate}
+                            onChange={e => setFormData({ ...formData, transactionDate: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
+                          <span className="text-red-500 font-bold">*</span> Danh Mục
+                        </label>
+                        <div className="relative">
+                          <select
+                            required
+                            disabled={modalMode === 'view' || modalMode === 'edit'}
+                            value={formData.categoryId || ''}
+                            onChange={e => setFormData({ ...formData, categoryId: e.target.value })}
+                            className={`w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none ${modalMode === 'edit' ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'}`}
+                            style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
+                          >
+                            <option value="">Chọn danh mục...</option>
+                            {categories.filter(c => {
+                              const catType = c.type.toUpperCase();
+                              if (modalType === 'INCOME') return catType === 'THU';
+                              if (modalType === 'EXPENSE') return catType === 'CHI';
+                              if (modalType === 'LOAN') return catType === 'VAY';
+                              return false;
+                            }).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
+                          Dự Án
+                        </label>
+                        <input
+                          type="text"
+                          disabled={modalMode === 'view'}
+                          placeholder="Nhập tên dự án..."
+                          value={formData.projectName || ''}
+                          onChange={e => setFormData({ ...formData, projectName: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
+                          <span className="text-red-500 font-bold">*</span> Business Unit
+                        </label>
+                        <div className="relative">
+                          <select
+                            required
+                            disabled={
+                              modalMode === 'view' ||
+                              !canSelectBU ||
+                              formData.costAllocation === 'INDIRECT'
+                            }
+                            value={formData.costAllocation === 'INDIRECT' ? 'indirect' : (formData.businessUnitId || '')}
+                            onChange={e => {
+                              const newBuId = e.target.value;
+                              setFormData({
+                                ...formData,
+                                businessUnitId: newBuId,
+                                partnerId: undefined,
+                                employeeId: undefined
+                              });
+                            }}
+                            className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#004aad] outline-none appearance-none bg-white transition-all disabled:bg-gray-50 disabled:text-gray-500"
+                            style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
+                          >
+                            {formData.costAllocation === 'INDIRECT' ? (
+                              <option value="indirect">--- Phân bổ gián tiếp (Tự động) ---</option>
+                            ) : (
+                              <>
+                                <option value="">Chọn đơn vị (BU)...</option>
+                                {businessUnits.map(bu => (
+                                  <option key={bu.id} value={bu.id}>{bu.name}</option>
+                                ))}
+                              </>
+                            )}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        </div>
+                        {formData.costAllocation === 'INDIRECT' && (
+                          <p className="text-xs text-gray-500 mt-1.5 italic">
+                            💡 BU sẽ được phân bổ tự động theo quy tắc phân bổ gián tiếp
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* SECTION 2: ĐỐI TƯỢNG GIAO DỊCH */}
-                <div>
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <span className="w-1 h-4 bg-blue-600 rounded-full"></span>
-                    Đối tượng giao dịch
-                  </h3>
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-5">
-                    <div className="col-span-2 flex mb-2" style={{ gap: '50px' }}>
-                      <label className="flex-shrink-0 flex items-center cursor-pointer gap-2 group whitespace-nowrap mr-10">
-                        <input
-                          type="radio"
-                          name="objectType"
-                          checked={formData.objectType === 'PARTNER'}
-                          onChange={() => setFormData({ ...formData, objectType: 'PARTNER' })}
-                          disabled={modalMode === 'view'}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        />
-                        <span className={`text-sm font-semibold ${formData.objectType === 'PARTNER' ? 'text-gray-900' : 'text-gray-500'}`}>Đối tác</span>
-                      </label>
-                      <label className="flex-shrink-0 flex items-center cursor-pointer gap-2 group whitespace-nowrap mr-10">
-                        <input
-                          type="radio"
-                          name="objectType"
-                          checked={formData.objectType === 'EMPLOYEE'}
-                          onChange={() => setFormData({ ...formData, objectType: 'EMPLOYEE' })}
-                          disabled={modalMode === 'view'}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        />
-                        <span className={`text-sm font-semibold ${formData.objectType === 'EMPLOYEE' ? 'text-gray-900' : 'text-gray-500'}`}>Nhân viên</span>
-                      </label>
-                      {modalType === 'INCOME' && (
+                  {/* SECTION 2: ĐỐI TƯỢNG GIAO DỊCH */}
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <span className="w-1 h-4 bg-blue-600 rounded-full"></span>
+                      Đối tượng giao dịch
+                    </h3>
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+                      <div className="col-span-2 flex mb-2" style={{ gap: '50px' }}>
                         <label className="flex-shrink-0 flex items-center cursor-pointer gap-2 group whitespace-nowrap mr-10">
                           <input
                             type="radio"
                             name="objectType"
-                            checked={formData.objectType === 'STUDENT'}
-                            onChange={() => setFormData({ ...formData, objectType: 'STUDENT' })}
+                            checked={formData.objectType === 'PARTNER'}
+                            onChange={() => setFormData({ ...formData, objectType: 'PARTNER' })}
                             disabled={modalMode === 'view'}
                             className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                           />
-                          <span className={`text-sm font-semibold ${formData.objectType === 'STUDENT' ? 'text-gray-900' : 'text-gray-500'}`}>Học viên</span>
+                          <span className={`text-sm font-semibold ${formData.objectType === 'PARTNER' ? 'text-gray-900' : 'text-gray-500'}`}>Đối tác</span>
                         </label>
-                      )}
-                      <label className="flex-shrink-0 flex items-center cursor-pointer gap-2 group whitespace-nowrap mr-10">
-                        <input
-                          type="radio"
-                          name="objectType"
-                          checked={formData.objectType === 'OTHER'}
-                          onChange={() => setFormData({ ...formData, objectType: 'OTHER' })}
-                          disabled={modalMode === 'view'}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        />
-                        <span className={`text-sm font-semibold ${formData.objectType === 'OTHER' ? 'text-gray-900' : 'text-gray-500'}`}>Khác</span>
-                      </label>
-                    </div>
-                    <div>
-                      <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
-                        <span className="text-red-500 font-bold">*</span> {
-                          formData.objectType === 'PARTNER' ? 'Đối tác' :
-                            formData.objectType === 'EMPLOYEE' ? 'Nhân viên' :
-                              formData.objectType === 'STUDENT' ? 'Học viên' :
-                                'Đối tượng khác'
-                        }
-                      </label>
-                      <div className="relative">
-                        {formData.objectType === 'STUDENT' || formData.objectType === 'OTHER' ? (
+                        <label className="flex-shrink-0 flex items-center cursor-pointer gap-2 group whitespace-nowrap mr-10">
                           <input
-                            type="text"
-                            required
+                            type="radio"
+                            name="objectType"
+                            checked={formData.objectType === 'EMPLOYEE'}
+                            onChange={() => setFormData({ ...formData, objectType: 'EMPLOYEE' })}
                             disabled={modalMode === 'view'}
-                            placeholder={formData.objectType === 'STUDENT' ? "Nhập tên học viên..." : "Nhập tên đối tượng..."}
-                            鼓 value={(formData.objectType === 'STUDENT' ? formData.studentName : formData.otherName) || ''}
-                            onChange={e => setFormData({ ...formData, [formData.objectType === 'STUDENT' ? 'studentName' : 'otherName']: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                           />
-                        ) : (
-                          <>
-                            <select
+                          <span className={`text-sm font-semibold ${formData.objectType === 'EMPLOYEE' ? 'text-gray-900' : 'text-gray-500'}`}>Nhân viên</span>
+                        </label>
+                        {modalType === 'INCOME' && (
+                          <label className="flex-shrink-0 flex items-center cursor-pointer gap-2 group whitespace-nowrap mr-10">
+                            <input
+                              type="radio"
+                              name="objectType"
+                              checked={formData.objectType === 'STUDENT'}
+                              onChange={() => setFormData({ ...formData, objectType: 'STUDENT' })}
+                              disabled={modalMode === 'view'}
+                              className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            />
+                            <span className={`text-sm font-semibold ${formData.objectType === 'STUDENT' ? 'text-gray-900' : 'text-gray-500'}`}>Học viên</span>
+                          </label>
+                        )}
+                        <label className="flex-shrink-0 flex items-center cursor-pointer gap-2 group whitespace-nowrap mr-10">
+                          <input
+                            type="radio"
+                            name="objectType"
+                            checked={formData.objectType === 'OTHER'}
+                            onChange={() => setFormData({ ...formData, objectType: 'OTHER' })}
+                            disabled={modalMode === 'view'}
+                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          />
+                          <span className={`text-sm font-semibold ${formData.objectType === 'OTHER' ? 'text-gray-900' : 'text-gray-500'}`}>Khác</span>
+                        </label>
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
+                          <span className="text-red-500 font-bold">*</span> {
+                            formData.objectType === 'PARTNER' ? 'Đối tác' :
+                              formData.objectType === 'EMPLOYEE' ? 'Nhân viên' :
+                                formData.objectType === 'STUDENT' ? 'Học viên' :
+                                  'Đối tượng khác'
+                          }
+                        </label>
+                        <div className="relative">
+                          {formData.objectType === 'STUDENT' || formData.objectType === 'OTHER' ? (
+                            <input
+                              type="text"
                               required
                               disabled={modalMode === 'view'}
-                              value={(formData.objectType === 'PARTNER' ? formData.partnerId : formData.employeeId) || ''}
-                              onChange={e => setFormData({ ...formData, [formData.objectType === 'PARTNER' ? 'partnerId' : 'employeeId']: e.target.value })}
-                              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none bg-white font-medium"
-                              style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
-                            >
-                              <option value="">Chọn...</option>
-                              {formData.objectType === 'PARTNER'
-                                ? partners
-                                  .filter(p => {
-                                    if (!formData.businessUnitId) return true;
-                                    // Check if partner belongs to selected BU (many-to-many support)
-                                    const hasSelectedBU = p.businessUnitId === formData.businessUnitId ||
-                                      p.businessUnits?.some((bu: any) => bu.id === formData.businessUnitId) ||
-                                      p.businessUnit?.name === businessUnits.find(bu => bu.id === formData.businessUnitId)?.name;
-                                    return hasSelectedBU;
-                                  })
-                                  .map(p => <option key={p.id} value={p.id}>{p.partnerName}</option>)
-                                : (
-                                  <>
-                                    {formData.businessUnitId && (
-                                      <option value="ALL_IN_BU" className="font-bold text-blue-600">
-                                        --- TẤT CẢ NHÂN VIÊN THUỘC {businessUnits.find(bu => bu.id === formData.businessUnitId)?.name.toUpperCase()} ---
-                                      </option>
-                                    )}
-                                    {employees
-                                      .filter(e => !formData.businessUnitId || e.businessUnitId === formData.businessUnitId || e.businessUnit === businessUnits.find(bu => bu.id === formData.businessUnitId)?.name)
-                                      .map(e => <option key={e.id} value={e.id}>{e.fullName}</option>)
-                                    }
-                                  </>
-                                )
-                              }
-                            </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                          </>
-                        )}
+                              placeholder={formData.objectType === 'STUDENT' ? "Nhập tên học viên..." : "Nhập tên đối tượng..."}
+                              value={(formData.objectType === 'STUDENT' ? formData.studentName : formData.otherName) || ''}
+                              onChange={e => setFormData({ ...formData, [formData.objectType === 'STUDENT' ? 'studentName' : 'otherName']: e.target.value })}
+                              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                            />
+                          ) : (
+                            <>
+                              <select
+                                required
+                                disabled={modalMode === 'view'}
+                                value={(formData.objectType === 'PARTNER' ? formData.partnerId : formData.employeeId) || ''}
+                                onChange={e => setFormData({ ...formData, [formData.objectType === 'PARTNER' ? 'partnerId' : 'employeeId']: e.target.value })}
+                                className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none bg-white font-medium"
+                                style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
+                              >
+                                <option value="">Chọn...</option>
+                                {formData.objectType === 'PARTNER'
+                                  ? partners
+                                    .filter(p => {
+                                      if (!formData.businessUnitId) return true;
+                                      // Check if partner belongs to selected BU (many-to-many support)
+                                      const hasSelectedBU = p.businessUnitId === formData.businessUnitId ||
+                                        p.businessUnits?.some((bu: any) => bu.id === formData.businessUnitId) ||
+                                        p.businessUnit?.name === businessUnits.find(bu => bu.id === formData.businessUnitId)?.name;
+                                      return hasSelectedBU;
+                                    })
+                                    .map(p => <option key={p.id} value={p.id}>{p.partnerName}</option>)
+                                  : (
+                                    <>
+                                      {formData.businessUnitId && (
+                                        <option value="ALL_IN_BU" className="font-bold text-blue-600">
+                                          --- TẤT CẢ NHÂN VIÊN THUỘC {businessUnits.find(bu => bu.id === formData.businessUnitId)?.name.toUpperCase()} ---
+                                        </option>
+                                      )}
+                                      {employees
+                                        .filter(e => !formData.businessUnitId || e.businessUnitId === formData.businessUnitId || e.businessUnit === businessUnits.find(bu => bu.id === formData.businessUnitId)?.name)
+                                        .map(e => <option key={e.id} value={e.id}>{e.fullName}</option>)
+                                      }
+                                    </>
+                                  )
+                                }
+                              </select>
+                              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
+                          <span className="text-red-500 font-bold">*</span> Phương Thức Thanh Toán
+                        </label>
+                        <div className="relative">
+                          <select
+                            required
+                            disabled={modalMode === 'view'}
+                            value={formData.paymentMethodId || ''}
+                            onChange={e => setFormData({ ...formData, paymentMethodId: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none bg-white font-medium"
+                            style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
+                          >
+                            {paymentMethods.map(pm => <option key={pm.id} value={pm.id}>{pm.name}</option>)}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
+                          Trạng Thái Thanh Toán
+                        </label>
+                        <div className="relative">
+                          <select
+                            disabled={modalMode === 'view'}
+                            value={formData.paymentStatus || 'UNPAID'}
+                            onChange={e => setFormData({ ...formData, paymentStatus: e.target.value as any })}
+                            className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none bg-white"
+                            style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
+                          >
+                            <option value="UNPAID">Chưa thanh toán</option>
+                            <option value="PAID">Đã thanh toán</option>
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
-                        <span className="text-red-500 font-bold">*</span> Phương Thức Thanh Toán
+                  </div>
+
+                  {/* SECTION 3: SỐ TIỀN VÀ PHÂN BỔ CHI PHÍ */}
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <span className="w-1 h-4 bg-blue-600 rounded-full"></span>
+                      Số tiền {modalType !== 'INCOME' && modalType !== 'LOAN' && 'và phân bổ chi phí'}
+                    </h3>
+                    <div className="col-span-2">
+                      <label className="block text-[13px] font-semibold text-gray-600 mb-1.5">
+                        <span className="text-gray-400 font-bold mr-1">$</span> <span className="text-red-500 font-bold">*</span> Số Tiền (VND)
                       </label>
                       <div className="relative">
-                        <select
+                        <input
+                          type="text"
                           required
                           disabled={modalMode === 'view'}
-                          value={formData.paymentMethodId || ''}
-                          onChange={e => setFormData({ ...formData, paymentMethodId: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none bg-white font-medium"
-                          style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
-                        >
-                          {paymentMethods.map(pm => <option key={pm.id} value={pm.id}>{pm.name}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          value={formData.amount !== undefined ? formatNumber(formData.amount) : ''}
+                          onChange={e => {
+                            const rawValue = e.target.value.replace(/\./g, '').replace(/[^0-9]/g, '');
+                            const numValue = rawValue ? parseInt(rawValue, 10) : 0;
+                            setFormData({ ...formData, amount: numValue });
+                          }}
+                          className="w-full pl-4 pr-10 py-2 border border-gray-200 rounded-lg font-bold text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                          placeholder="0"
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">
+                          đ
+                        </div>
                       </div>
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-[13px] font-semibold text-gray-600 mb-1.5 flex items-center gap-2">
-                        Trạng Thái Thanh Toán
-                      </label>
-                      <div className="relative">
-                        <select
-                          disabled={modalMode === 'view'}
-                          value={formData.paymentStatus || 'UNPAID'}
-                          onChange={e => setFormData({ ...formData, paymentStatus: e.target.value as any })}
-                          className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none bg-white"
-                          style={{ WebkitAppearance: 'none', MozAppearance: 'none' } as React.CSSProperties}
-                        >
-                          <option value="UNPAID">Chưa thanh toán</option>
-                          <option value="PAID">Đã thanh toán</option>
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                      </div>
+                      <p className="text-[12px] italic text-gray-500 mt-1">Số tiền gốc: {formData.amount || 0}</p>
                     </div>
                   </div>
-                </div>
-
-                {/* SECTION 3: SỐ TIỀN VÀ PHÂN BỔ CHI PHÍ */}
-                <div>
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <span className="w-1 h-4 bg-blue-600 rounded-full"></span>
-                    Số tiền {modalType !== 'INCOME' && modalType !== 'LOAN' && 'và phân bổ chi phí'}
-                  </h3>
-                  <div className="col-span-2">
-                    <label className="block text-[13px] font-semibold text-gray-600 mb-1.5">
-                      <span className="text-gray-400 font-bold mr-1">$</span> <span className="text-red-500 font-bold">*</span> Số Tiền (VND)
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        required
-                        disabled={modalMode === 'view'}
-                        value={formData.amount !== undefined ? formatNumber(formData.amount) : ''}
-                        onChange={e => {
-                          const rawValue = e.target.value.replace(/\./g, '').replace(/[^0-9]/g, '');
-                          const numValue = rawValue ? parseInt(rawValue, 10) : 0;
-                          setFormData({ ...formData, amount: numValue });
-                        }}
-                        className="w-full pl-4 pr-10 py-2 border border-gray-200 rounded-lg font-bold text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                        placeholder="0"
-                      />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">
-                        đ
-                      </div>
-                    </div>
-                    <p className="text-[12px] italic text-gray-500 mt-1">Số tiền gốc: {formData.amount || 0}</p>
-                  </div>
-                </div>
-                {/* SECTION 4: HỢP ĐỒNG ĐÍNH KÈM */}
-                <div>
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <span className="w-1 h-4 bg-blue-600 rounded-full"></span>
-                    Hợp đồng đính kèm
-                  </h3>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-[13px] font-semibold text-gray-600 mb-2 flex items-center gap-2">
-                        <ImageIcon className="w-4 h-4 text-blue-600" />
-                        Upload hình ảnh chứng từ <span className="text-red-500">*</span>
-                      </p>
-                      <input
-                        type="file"
-                        multiple
-                        ref={fileInputRef}
-                        className="hidden"
-                        onChange={e => {
-                          if (e.target.files) {
-                            setSelectedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
-                          }
-                        }}
-                      />
-                      <div
-                        onClick={() => fileInputRef.current?.click()}
-                        className="border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer group"
-                      >
-                        <Upload className="w-10 h-10 text-gray-300 group-hover:text-blue-500 transition-colors mb-3" />
-                        <p className="text-sm font-semibold text-gray-700">Click để upload hoặc kéo thả file</p>
-                        <p className="text-[11px] text-gray-400 mt-1">Hỗ trợ: JPG, PNG, PDF (Tối đa 10MB)</p>
-                      </div>
-                      {selectedFiles.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {selectedFiles.map((f, i) => (
-                            <div key={i} className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-medium border border-blue-100">
-                              <FileText className="w-3 h-3" />
-                              <span className="max-w-[150px] truncate">{f.name}</span>
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); setSelectedFiles(prev => prev.filter((_, idx) => idx !== i)); }}
-                                className="hover:text-red-500 transition-colors"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </div>
-                          ))}
+                  {/* SECTION 4: HỢP ĐỒNG ĐÍNH KÈM */}
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <span className="w-1 h-4 bg-blue-600 rounded-full"></span>
+                      Hợp đồng đính kèm
+                    </h3>
+                    <div className="space-y-4">
+                      {/* Display existing attachments */}
+                      {formData.attachments && formData.attachments.length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-[13px] font-semibold text-gray-600 mb-2 flex items-center gap-2">
+                            <Paperclip className="w-4 h-4 text-blue-600" />
+                            Chứng từ đã đính kèm:
+                          </p>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {formData.attachments.map((file, idx) => (
+                              <div key={file.id || idx} className="relative group border rounded-lg overflow-hidden bg-gray-50 flex flex-col">
+                                <div className="aspect-video bg-gray-200 flex items-center justify-center overflow-hidden">
+                                  {file.fileType.startsWith('image/') ? (
+                                    <img
+                                      src={file.fileUrl}
+                                      alt={file.fileName}
+                                      className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                                    />
+                                  ) : (
+                                    <FileText className="w-10 h-10 text-gray-400" />
+                                  )}
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const viewerUrl = `/document-viewer?url=${encodeURIComponent(getAbsoluteUrl(file.fileUrl))}&name=${encodeURIComponent(file.fileName)}&type=${encodeURIComponent(file.fileType)}`;
+                                        window.open(viewerUrl, '_blank');
+                                      }}
+                                      className="p-2 bg-white rounded-full text-blue-600 hover:bg-blue-50 transition-colors"
+                                      title="Xem trước"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDownloadFile(file.fileUrl, file.fileName)}
+                                      className="p-2 bg-white rounded-full text-green-600 hover:bg-green-50 transition-colors"
+                                      title="Tải xuống"
+                                    >
+                                      <Download className="w-4 h-4" />
+                                    </button>
+                                    {modalMode !== 'view' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const newAttachments = formData.attachments?.filter((_, i) => i !== idx);
+                                          setFormData({ ...formData, attachments: newAttachments });
+                                        }}
+                                        className="p-2 bg-white rounded-full text-red-600 hover:bg-red-50 transition-colors"
+                                        title="Xóa"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="p-2 bg-white border-t">
+                                  <p className="text-xs font-medium text-gray-700 truncate" title={file.fileName}>
+                                    {file.fileName}
+                                  </p>
+                                  <p className="text-[10px] text-gray-500">
+                                    {(file.fileSize / 1024).toFixed(1)} KB
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
-                    </div>
-                    <div>
-                      <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-blue-600" />
-                        Mô Tả / Ghi Chú <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        rows={3}
-                        disabled={modalMode === 'view'}
-                        value={formData.description || ''}
-                        onChange={e => setFormData({ ...formData, description: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
-                        placeholder="Nhập mô tả chi tiết..."
-                      />
+
+                      {/* Upload UI - Only show if not in view mode */}
+                      {modalMode !== 'view' && (
+                        <div>
+                          <p className="text-[13px] font-semibold text-gray-600 mb-2 flex items-center gap-2">
+                            <ImageIcon className="w-4 h-4 text-blue-600" />
+                            Upload hình ảnh chứng từ mới <span className="text-red-500">*</span>
+                          </p>
+                          <input
+                            type="file"
+                            multiple
+                            ref={fileInputRef}
+                            className="hidden"
+                            onChange={e => {
+                              if (e.target.files) {
+                                setSelectedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+                              }
+                            }}
+                          />
+                          <div
+                            onClick={() => fileInputRef.current?.click()}
+                            className="border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer group"
+                          >
+                            <Upload className="w-10 h-10 text-gray-300 group-hover:text-blue-500 transition-colors mb-3" />
+                            <p className="text-sm font-semibold text-gray-700">Click để upload hoặc kéo thả file</p>
+                            <p className="text-[11px] text-gray-400 mt-1">Hỗ trợ: JPG, PNG, PDF (Tối đa 10MB)</p>
+                          </div>
+                          {selectedFiles.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {selectedFiles.map((f, i) => (
+                                <div key={i} className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-medium border border-blue-100">
+                                  <FileText className="w-3 h-3" />
+                                  <span className="max-w-[150px] truncate">{f.name}</span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setSelectedFiles(prev => prev.filter((_, idx) => idx !== i)); }}
+                                    className="hover:text-red-500 transition-colors"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-blue-600" />
+                          Mô Tả / Ghi Chú <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          rows={3}
+                          disabled={modalMode === 'view'}
+                          value={formData.description || ''}
+                          onChange={e => setFormData({ ...formData, description: e.target.value })}
+                          className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
+                          placeholder="Nhập mô tả chi tiết..."
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-8 flex justify-between items-center border-t pt-6">
-                {/* Simplified footer for all transactions */}
-                <div className="flex gap-3 w-full">
-                  {modalMode === 'edit' && (
-                    <button
-                      type="button"
-                      onClick={handleViewAuditLog}
-                      disabled={loadingLogs}
-                      className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold text-sm transition-colors flex items-center gap-2"
-                    >
-                      <History className="w-4 h-4" />
-                      {loadingLogs ? 'Đang tải...' : 'Lịch sử thay đổi'}
-                    </button>
-                  )}
-                  <div className="flex-1"></div>
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setModalMode(null)}
-                      className="px-8 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold text-sm transition-colors min-w-[120px]"
-                    >
-                      Hủy bỏ
-                    </button>
-                    {modalMode !== 'view' && (
-                      <button
-                        type="submit"
-                        disabled={loading}
-                        className="px-8 py-2 bg-[#004aad] text-white rounded-lg hover:bg-[#1557A0] font-semibold text-sm transition-colors min-w-[120px] flex items-center justify-center gap-2"
-                      >
-                        <Save className="w-4 h-4" />
-                        {loading ? 'Đang lưu...' : (modalMode === 'edit' ? 'Cập nhật' : 'Lưu phiếu')}
-                      </button>
-                    )}
-                  </div>
-                </div>
+              {/* Modal Footer */}
+              <div className="border-t border-gray-200 px-6 py-4 flex justify-center gap-3 bg-white">
+                {modalMode === 'edit' && (
+                  <button
+                    type="button"
+                    onClick={handleViewAuditLog}
+                    disabled={loadingLogs}
+                    className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium text-sm transition-colors flex items-center gap-2 min-w-[140px] justify-center"
+                  >
+                    <History className="w-4 h-4" />
+                    {loadingLogs ? 'Đang tải...' : 'Lịch sử'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setModalMode(null)}
+                  className="px-8 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium text-sm transition-colors min-w-[140px]"
+                >
+                  {modalMode === 'view' ? 'Đóng' : 'Hủy bỏ'}
+                </button>
+                {modalMode !== 'view' && (
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-8 py-2.5 bg-[#004aad] text-white rounded-lg hover:bg-[#1557A0] font-medium text-sm transition-colors min-w-[140px] flex items-center justify-center gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    {loading ? 'Đang lưu...' : (modalMode === 'edit' ? 'Cập nhật' : 'Xác nhận')}
+                  </button>
+                )}
               </div>
             </form>
           </div>
@@ -1793,39 +1955,33 @@ export function QuanLyThuChi() {
       {/* Audit Log Modal */}
       {showAuditLog && (
         <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center"
-          style={{ zIndex: 100000 }}
+          className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-[999999] animate-in fade-in duration-300"
         >
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden border-2 border-gray-100 ring-4 ring-black/10">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="flex justify-between items-center p-6 border-b">
-              <h2 className="text-xl font-bold text-gray-800">
-                Lịch sử thay đổi - {selectedTransaction?.transactionCode}
-              </h2>
+            <div className="border-b border-gray-200 px-6 py-5 flex items-start justify-between bg-white">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">
+                  Lịch sử thay đổi
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Mã phiếu: {selectedTransaction?.transactionCode}
+                </p>
+              </div>
               <button
                 onClick={handleCloseAuditLog}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                className="p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Content */}
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
+            {/* Content Area */}
+            <div className="overflow-y-auto max-h-[calc(90vh-180px)] px-6 py-6 bg-white">
               {auditLogs.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-                    <History className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <p className="text-gray-700 font-medium mb-2">
-                    Phiếu này chưa có lịch sử thay đổi
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Mã phiếu: {selectedTransaction?.transactionCode}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Chỉ các thay đổi sau khi phiếu được tạo mới được ghi lại
-                  </p>
+                <div className="text-center py-20 flex flex-col items-center justify-center gap-4 opacity-50">
+                  <History className="w-12 h-12 text-gray-300" />
+                  <p className="text-gray-500 font-medium">Phiếu này chưa có lịch sử thay đổi.</p>
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -1835,10 +1991,10 @@ export function QuanLyThuChi() {
                       <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow-sm"></div>
 
                       {/* Log entry content */}
-                      <div className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100">
                         <div className="flex justify-between items-center mb-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold">
+                            <div className="w-10 h-10 rounded-full bg-[#004aad]/10 flex items-center justify-center text-[#004aad] font-bold">
                               {log.user?.fullName?.charAt(0) || 'U'}
                             </div>
                             <div>
@@ -1859,9 +2015,8 @@ export function QuanLyThuChi() {
 
                         {/* Changes */}
                         {log.changes && Object.keys(log.changes).length > 0 && (
-                          <div className="space-y-3">
+                          <div className="space-y-3 bg-white p-4 rounded-lg border border-slate-100 shadow-sm">
                             {Object.entries(log.changes).map(([key, value]: [string, any]) => {
-                              // Translate keys
                               const fieldLabels: { [key: string]: string } = {
                                 'amount': 'Số tiền',
                                 'description': 'Diễn giải',
@@ -1876,8 +2031,6 @@ export function QuanLyThuChi() {
                                 'costAllocation': 'Phân bổ'
                               };
                               const label = fieldLabels[key] || key;
-
-                              // Format values
                               const formatVal = (v: any) => {
                                 if (v === null || v === undefined) return '---';
                                 if (key === 'amount') return formatCurrency(Number(v));
@@ -1891,7 +2044,7 @@ export function QuanLyThuChi() {
                                   <div className="col-span-9 flex items-center gap-2">
                                     <span className="text-gray-400 line-through truncate max-w-[150px]">{formatVal(value.old)}</span>
                                     <span className="text-gray-400">→</span>
-                                    <span className="text-blue-600 font-semibold">{formatVal(value.new)}</span>
+                                    <span className="text-[#004aad] font-bold">{formatVal(value.new)}</span>
                                   </div>
                                 </div>
                               );
@@ -1899,11 +2052,10 @@ export function QuanLyThuChi() {
                           </div>
                         )}
 
-                        {/* Action Reason */}
                         {log.reason && (
-                          <div className="mt-3 p-2 bg-yellow-50 rounded border border-yellow-100">
-                            <p className="text-xs text-yellow-800 font-semibold">Lý do:</p>
-                            <p className="text-sm text-yellow-700 italic">"{log.reason}"</p>
+                          <div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-100">
+                            <p className="text-xs text-red-800 font-bold mb-1">Lý do từ chối:</p>
+                            <p className="text-sm text-red-700 italic">"{log.reason}"</p>
                           </div>
                         )}
                       </div>
@@ -1913,11 +2065,11 @@ export function QuanLyThuChi() {
               )}
             </div>
 
-            {/* Footer */}
-            <div className="p-6 border-t flex justify-end">
+            {/* Modal Footer */}
+            <div className="border-t border-gray-200 px-6 py-4 flex justify-center bg-white">
               <button
                 onClick={handleCloseAuditLog}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                className="px-10 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium min-w-[140px]"
               >
                 Đóng
               </button>

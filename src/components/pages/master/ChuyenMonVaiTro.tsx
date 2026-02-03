@@ -273,18 +273,22 @@ export function ChuyenMonVaiTro() {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-            <div className="border-b border-gray-200 px-6 py-5">
+        <div className="fixed inset-0 bg-black/40 z-[999999] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+            <div className="border-b border-gray-200 px-6 py-5 bg-white">
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-xl font-bold text-gray-800">
                     {editingRole ? 'Chỉnh Sửa Vai Trò' : 'Tạo Mới Vai Trò'}
                   </h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Vui lòng điền đầy đủ thông tin bên dưới
+                  </p>
                 </div>
                 <button
                   onClick={() => setShowModal(false)}
                   className="p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
+                  aria-label="Close"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -339,7 +343,7 @@ export function ChuyenMonVaiTro() {
               </form>
             </div>
 
-            <div className="border-t border-gray-200 px-6 py-4 flex justify-center gap-3">
+            <div className="border-t border-gray-200 px-6 py-4 flex justify-center gap-3 bg-white">
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
@@ -350,7 +354,7 @@ export function ChuyenMonVaiTro() {
               <button
                 type="submit"
                 form="role-form"
-                className="px-8 py-2.5 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
+                className="px-8 py-2.5 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px] shadow-sm"
               >
                 {editingRole ? 'Cập Nhật' : 'Tạo Mới'}
               </button>
@@ -361,38 +365,40 @@ export function ChuyenMonVaiTro() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && deletingRole && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="p-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                  <AlertCircle className="w-6 h-6 text-red-600" />
+        <div className="fixed inset-0 bg-black/40 z-[999999] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 overflow-hidden">
+            <div className="p-8">
+              <div className="flex flex-col items-center text-center gap-4 mb-6">
+                <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center">
+                  <AlertCircle className="w-8 h-8 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-800">Xác nhận xóa</h3>
-                  <p className="text-sm text-gray-600">Bạn có chắc chắn muốn xóa vai trò này?</p>
+                  <h3 className="text-xl font-bold text-gray-800">Xác nhận xóa</h3>
+                  <p className="text-sm text-gray-500 mt-1">Bạn có chắc chắn muốn xóa vai trò này?</p>
                 </div>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <p className="text-sm text-gray-700">
-                  <span className="font-semibold">Mã:</span> {deletingRole.code}
+              <div className="bg-slate-50 rounded-xl p-5 mb-8 border border-slate-100">
+                <p className="text-sm text-gray-700 flex justify-between py-1 border-b border-dashed border-slate-200">
+                  <span className="font-semibold text-gray-500">Mã:</span>
+                  <span className="font-bold">{deletingRole.code}</span>
                 </p>
-                <p className="text-sm text-gray-700">
-                  <span className="font-semibold">Tên:</span> {deletingRole.name}
+                <p className="text-sm text-gray-700 flex justify-between py-1 mt-1">
+                  <span className="font-semibold text-gray-500">Tên:</span>
+                  <span className="font-bold">{deletingRole.name}</span>
                 </p>
               </div>
 
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={confirmDelete}
-                  className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-bold shadow-lg shadow-red-100"
                 >
                   Xác nhận xóa
                 </button>

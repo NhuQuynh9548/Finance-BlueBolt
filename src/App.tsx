@@ -17,6 +17,7 @@ import { QuanLyNguoiDung } from './components/pages/QuanTriHeThong/QuanLyNguoiDu
 import { PhanQuyenVaiTro } from './components/pages/QuanTriHeThong/PhanQuyenVaiTro';
 import { ThietLapBaoMat } from './components/pages/admin/ThietLapBaoMat';
 import { NhatKyHeThong } from './components/pages/admin/NhatKyHeThong';
+import { AuditLog } from './components/pages/admin/AuditLog';
 import { DanhMucThuChi } from './components/pages/master/DanhMucThuChi';
 import { PhanBoChiPhi } from './components/pages/master/PhanBoChiPhi';
 import { QuanLyDuAn } from './components/pages/master/QuanLyDuAn';
@@ -25,6 +26,7 @@ import { ChuyenMonVaiTro } from './components/pages/master/ChuyenMonVaiTro';
 import { PhuongThucThanhToan } from './components/pages/master/PhuongThucThanhToan';
 import { ProfilePage } from './components/pages/ProfilePage';
 import { ChangePasswordPage } from './components/pages/ChangePasswordPage';
+import { DocumentViewer } from './components/pages/DocumentViewer';
 
 function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -52,6 +54,7 @@ function AppLayout() {
             <Route path="/admin/phan-quyen" element={<PhanQuyenVaiTro />} />
             <Route path="/admin/bao-mat" element={<ThietLapBaoMat />} />
             <Route path="/admin/nhat-ky" element={<NhatKyHeThong />} />
+            <Route path="/admin/audit-logs" element={<AuditLog />} />
 
             {/* Master Data Routes */}
             <Route path="/master/danh-muc" element={<DanhMucThuChi />} />
@@ -83,6 +86,14 @@ export default function App() {
                 <Route path="/login" element={<LoginPage />} />
 
                 {/* Protected Routes */}
+                <Route
+                  path="/document-viewer"
+                  element={
+                    <ProtectedRoute>
+                      <DocumentViewer />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/*"
                   element={

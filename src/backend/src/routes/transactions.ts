@@ -1,61 +1,32 @@
 import { Router, Response } from 'express';
 import prisma from '../utils/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { auditService } from '../services/auditService';
 
 const router = Router();
 router.use(authenticate);
 
-// Helper function to create audit log
-async function createAuditLog(params: {
-    tableName: string;
-    recordId: string;
-    action: string;
-    userId: string;
-    oldValues?: any;
-    newValues?: any;
-    reason?: string;
-    req?: any;
-}) {
-    try {
-        const changes: any = {};
+// Helper function to calculate differences between objects
+function getChanges(oldVal: any, newVal: any) {
+    const changes: any = {};
+    if (!oldVal || !newVal) return null;
 
-        if (params.oldValues && params.newValues) {
-            // Calculate differences
-            Object.keys(params.newValues).forEach(key => {
-                if (JSON.stringify(params.oldValues[key]) !== JSON.stringify(params.newValues[key])) {
-                    changes[key] = {
-                        old: params.oldValues[key],
-                        new: params.newValues[key]
-                    };
-                }
-            });
+    Object.keys(newVal).forEach(key => {
+        if (JSON.stringify(oldVal[key]) !== JSON.stringify(newVal[key])) {
+            changes[key] = {
+                old: oldVal[key],
+                new: newVal[key]
+            };
         }
-
-        await prisma.auditLog.create({
-            data: {
-                tableName: params.tableName,
-                recordId: params.recordId,
-                action: params.action,
-                userId: params.userId,
-                oldValues: params.oldValues || null,
-                newValues: params.newValues || null,
-                changes: Object.keys(changes).length > 0 ? changes : null,
-                reason: params.reason,
-                ipAddress: params.req?.ip || params.req?.connection?.remoteAddress,
-                userAgent: params.req?.headers?.['user-agent']
-            }
-        });
-    } catch (error) {
-        console.error('Failed to create audit log:', error);
-    }
+    });
+    return Object.keys(changes).length > 0 ? changes : null;
 }
-
 
 // GET /api/transactions
 router.get('/', async (req: AuthRequest, res: Response) => {
     try {
         const user = req.user!;
-        const { buId, type, status, dateFrom, dateTo } = req.query;
+        const { buId, type, status, dateFrom, dateTo, categoryId } = req.query;
 
         let where: any = {};
 
@@ -96,6 +67,10 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 
         if (status) {
             where.approvalStatus = (status as string).toUpperCase();
+        }
+
+        if (categoryId) {
+            where.categoryId = categoryId as string;
         }
 
         if (dateFrom || dateTo) {
@@ -182,6 +157,18 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         data.approvalStatus = 'APPROVED';
 
         // --- ATOMIC CODE GENERATION ---
+        // Fetch BU code
+        const bu = await prisma.businessUnit.findUnique({
+            where: { id: data.businessUnitId },
+            select: { code: true }
+        });
+
+        if (!bu) {
+            return res.status(400).json({ error: 'Business Unit not found' });
+        }
+
+        const buCode = bu.code || 'BU';
+
         // Use transactionDate from form, fallback to current date if invalid
         let txnDate: Date;
         try {
@@ -196,10 +183,14 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 
         const mm = String(txnDate.getMonth() + 1).padStart(2, '0');
         const yy = String(txnDate.getFullYear()).slice(-2);
-        const prefix = data.transactionType === 'INCOME' ? 'T' :
+
+        // Prefix: T (Thu), C (Chi), V (Vay)
+        const typePrefix = data.transactionType === 'INCOME' ? 'T' :
             data.transactionType === 'EXPENSE' ? 'C' : 'V';
+
         const dateStr = `${mm}${yy}`;
-        const sequenceKey = `TXN_${prefix}_${dateStr}`;
+        // Reset sequence by BU, Type, and Month
+        const sequenceKey = `TXNSEQ_${data.businessUnitId}_${typePrefix}_${dateStr}`;
 
         // Atomic increment of sequence
         const sequence = await prisma.systemSequence.upsert({
@@ -208,8 +199,8 @@ router.post('/', async (req: AuthRequest, res: Response) => {
             create: { key: sequenceKey, value: 1 }
         });
 
-        const seqStr = String(sequence.value).padStart(2, '0');
-        const atomicCode = `${prefix}${dateStr}_${seqStr}`;
+        const seqStr = String(sequence.value).padStart(3, '0');
+        const atomicCode = `${buCode}_${typePrefix}${dateStr}_${seqStr}`;
         // ------------------------------
 
         const { attachments, allocationPreviews, ...txnData } = data;
@@ -237,6 +228,17 @@ router.post('/', async (req: AuthRequest, res: Response) => {
                     }
                 }
             }
+        });
+
+        // Audit Log for CREATE
+        await auditService.log({
+            tableName: 'Transaction',
+            recordId: transaction.id,
+            action: 'CREATE',
+            userId: req.user!.id,
+            newValues: transaction,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] as string
         });
 
         // Notify the creator
@@ -288,7 +290,7 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
         const {
             attachments,
             allocationPreviews,
-            // Exclude relation objects that might be present in the body
+            // Exclude relation objects and metadata that might be present in the body
             category,
             project,
             partner,
@@ -296,6 +298,10 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
             businessUnit,
             paymentMethod,
             allocationRule,
+            creator,
+            updateReason,
+            auditLogs,
+            id: txnId, // Renamed to avoid shadowed variable
             ...txnData
         } = req.body;
 
@@ -320,16 +326,18 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
             }
         });
 
-        // Create audit log
-        await createAuditLog({
+        // Audit Log for UPDATE
+        await auditService.log({
             tableName: 'Transaction',
             recordId: id,
             action: 'UPDATE',
             userId: user.id,
             oldValues: currentTxn,
             newValues: transaction,
+            changes: getChanges(currentTxn, transaction),
             reason: req.body.updateReason,
-            req
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] as string
         });
 
         res.json(transaction);
@@ -362,15 +370,16 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
             });
         }
 
-        // Create audit log before deletion
-        await createAuditLog({
+        // Audit Log for DELETE
+        await auditService.log({
             tableName: 'Transaction',
             recordId: id,
             action: 'DELETE',
             userId: user.id,
             oldValues: currentTxn,
             reason: req.body.deleteReason,
-            req
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] as string
         });
 
         await prisma.transaction.delete({
@@ -394,6 +403,8 @@ router.put('/:id/approve', async (req: AuthRequest, res: Response) => {
             return res.status(403).json({ error: 'You do not have permission to approve transactions' });
         }
 
+        const currentTxn = await prisma.transaction.findUnique({ where: { id: req.params.id } });
+
         const transaction = await prisma.transaction.update({
             where: { id: req.params.id as string },
             data: {
@@ -407,15 +418,17 @@ router.put('/:id/approve', async (req: AuthRequest, res: Response) => {
             }
         });
 
-        // Create audit log
-        await createAuditLog({
+        // Audit Log for APPROVE
+        await auditService.log({
             tableName: 'Transaction',
             recordId: req.params.id as string,
             action: 'APPROVE',
             userId: user.id,
-            oldValues: { approvalStatus: 'PENDING' },
-            newValues: { approvalStatus: 'APPROVED', paymentStatus: 'PAID' },
-            req
+            oldValues: currentTxn,
+            newValues: transaction,
+            changes: getChanges(currentTxn, transaction),
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] as string
         });
 
         // Notify the creator
@@ -458,6 +471,8 @@ router.put('/:id/reject', async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ error: 'Rejection reason is required' });
         }
 
+        const currentTxn = await prisma.transaction.findUnique({ where: { id: req.params.id } });
+
         const transaction = await prisma.transaction.update({
             where: { id: req.params.id as string },
             data: {
@@ -471,16 +486,18 @@ router.put('/:id/reject', async (req: AuthRequest, res: Response) => {
             }
         });
 
-        // Create audit log
-        await createAuditLog({
+        // Audit Log for REJECT
+        await auditService.log({
             tableName: 'Transaction',
             recordId: req.params.id as string,
             action: 'REJECT',
             userId: user.id,
-            oldValues: { approvalStatus: 'PENDING' },
-            newValues: { approvalStatus: 'REJECTED', paymentStatus: 'UNPAID' },
+            oldValues: currentTxn,
+            newValues: transaction,
+            changes: getChanges(currentTxn, transaction),
             reason: reason,
-            req
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] as string
         });
 
         // Notify the creator

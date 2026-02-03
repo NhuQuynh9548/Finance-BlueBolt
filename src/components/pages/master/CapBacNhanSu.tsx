@@ -298,18 +298,22 @@ export function CapBacNhanSu() {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-            <div className="border-b border-gray-200 px-6 py-5">
+        <div className="fixed inset-0 bg-black/40 z-[999999] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+            <div className="border-b border-gray-200 px-6 py-5 bg-white">
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-xl font-bold text-gray-800">
                     {editingLevel ? 'Chỉnh Sửa Cấp Bậc' : 'Tạo Mới Cấp Bậc'}
                   </h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Vui lòng điền đầy đủ thông tin bên dưới
+                  </p>
                 </div>
                 <button
                   onClick={() => setShowModal(false)}
                   className="p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
+                  aria-label="Close"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -365,7 +369,7 @@ export function CapBacNhanSu() {
               </form>
             </div>
 
-            <div className="border-t border-gray-200 px-6 py-4 flex justify-center gap-3">
+            <div className="border-t border-gray-200 px-6 py-4 flex justify-center gap-3 bg-white">
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
@@ -376,7 +380,7 @@ export function CapBacNhanSu() {
               <button
                 type="submit"
                 form="level-form"
-                className="px-8 py-2.5 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
+                className="px-8 py-2.5 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px] shadow-sm"
               >
                 {editingLevel ? 'Cập Nhật' : 'Tạo Mới'}
               </button>
@@ -387,97 +391,99 @@ export function CapBacNhanSu() {
       }
 
       {/* Delete Confirmation Modal */}
-      {
-        showDeleteConfirm && deletingLevel && (
-          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-              <div className="p-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                    <AlertCircle className="w-6 h-6 text-red-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-800">Xác nhận xóa</h3>
-                    <p className="text-sm text-gray-600">Bạn có chắc chắn muốn xóa cấp bậc này?</p>
-                  </div>
+      {showDeleteConfirm && deletingLevel && (
+        <div className="fixed inset-0 bg-black/40 z-[999999] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 overflow-hidden">
+            <div className="p-8">
+              <div className="flex flex-col items-center text-center gap-4 mb-6">
+                <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center">
+                  <AlertCircle className="w-8 h-8 text-red-600" />
                 </div>
-
-                <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                  <p className="text-sm text-gray-700">
-                    <span className="font-semibold">Mã:</span> {deletingLevel.code}
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    <span className="font-semibold">Tên:</span> {deletingLevel.name}
-                  </p>
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowDeleteConfirm(false)}
-                    className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    onClick={confirmDelete}
-                    className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
-                  >
-                    Xác nhận xóa
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      }
-      {/* View Details Modal */}
-      {
-        viewingLevel && (
-          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-              <div className="border-b border-gray-200 px-6 py-5">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-800">Chi Tiết Cấp Bậc</h2>
-                  </div>
-                  <button
-                    onClick={() => setViewingLevel(null)}
-                    className="p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800">Xác nhận xóa</h3>
+                  <p className="text-sm text-gray-500 mt-1">Bạn có chắc chắn muốn xóa cấp bậc này?</p>
                 </div>
               </div>
 
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">Mã Cấp Bậc</label>
-                  <div className="text-gray-900 font-medium bg-gray-50 p-3 rounded-lg border border-gray-100">{viewingLevel.code}</div>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">Tên Cấp Bậc</label>
-                  <div className="text-gray-900 font-medium bg-gray-50 p-3 rounded-lg border border-gray-100">{viewingLevel.name}</div>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">Mô Tả</label>
-                  <div className="text-gray-900 bg-gray-50 p-3 rounded-lg border border-gray-100 whitespace-pre-wrap">
-                    {viewingLevel.description || <span className="text-gray-400 italic">Không có mô tả</span>}
-                  </div>
-                </div>
+              <div className="bg-slate-50 rounded-xl p-5 mb-8 border border-slate-100">
+                <p className="text-sm text-gray-700 flex justify-between py-1 border-b border-dashed border-slate-200">
+                  <span className="font-semibold text-gray-500">Mã:</span>
+                  <span className="font-bold">{deletingLevel.code}</span>
+                </p>
+                <p className="text-sm text-gray-700 flex justify-between py-1 mt-1">
+                  <span className="font-semibold text-gray-500">Tên:</span>
+                  <span className="font-bold">{deletingLevel.name}</span>
+                </p>
               </div>
 
-              <div className="bg-gray-50 px-6 py-4 flex justify-end">
+              <div className="flex gap-3">
                 <button
-                  onClick={() => setViewingLevel(null)}
-                  className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
                 >
-                  Đóng
+                  Hủy
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-bold shadow-lg shadow-red-100"
+                >
+                  Xác nhận xóa
                 </button>
               </div>
             </div>
           </div>
-        )
-      }
+        </div>
+      )}
+      {/* View Details Modal */}
+      {viewingLevel && (
+        <div className="fixed inset-0 bg-black/40 z-[999999] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="border-b border-gray-200 px-6 py-5 bg-white">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800">Chi Tiết Cấp Bậc</h2>
+                  <p className="text-sm text-gray-500 mt-1">Thông tin chi tiết cấp bậc nhân sự</p>
+                </div>
+                <button
+                  onClick={() => setViewingLevel(null)}
+                  className="p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-1 gap-6">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Mã Cấp Bậc</label>
+                  <div className="text-gray-900 font-bold bg-slate-50 p-4 rounded-xl border border-slate-100">{viewingLevel.code}</div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Tên Cấp Bậc</label>
+                  <div className="text-gray-900 font-bold bg-slate-50 p-4 rounded-xl border border-slate-100">{viewingLevel.name}</div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Mô Tả</label>
+                  <div className="text-gray-700 bg-slate-50 p-4 rounded-xl border border-slate-100 whitespace-pre-wrap min-h-[100px]">
+                    {viewingLevel.description || <span className="text-gray-400 italic font-normal">Không có mô tả</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white border-t border-gray-100 px-6 py-4 flex justify-center">
+              <button
+                onClick={() => setViewingLevel(null)}
+                className="px-12 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-bold"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 }

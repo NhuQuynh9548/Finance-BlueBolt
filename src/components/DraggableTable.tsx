@@ -33,29 +33,26 @@ interface DraggableHeaderProps {
   renderSortIcon?: (field: string) => React.ReactNode;
 }
 
-function DraggableHeader({ 
-  column, 
-  index, 
-  onMove, 
+function DraggableHeader({
+  column,
+  index,
+  onMove,
   onSort,
   sortField,
   sortOrder,
-  renderSortIcon 
+  renderSortIcon
 }: DraggableHeaderProps) {
   const ref = useRef<HTMLTableCellElement>(null);
-  const dragItemRef = useRef<{ index: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isOver, setIsOver] = useState(false);
 
   const handleDragStart = (e: React.DragEvent) => {
-    dragItemRef.current = { index };
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', '');
+    e.dataTransfer.setData('column-index', index.toString());
     setIsDragging(true);
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
-    dragItemRef.current = null;
     setIsDragging(false);
   };
 
@@ -77,19 +74,20 @@ function DraggableHeader({
     e.preventDefault();
     setIsOver(false);
 
-    if (dragItemRef.current) {
-      const dragIndex = dragItemRef.current.index;
+    const dragIndexStr = e.dataTransfer.getData('column-index');
+    if (dragIndexStr) {
+      const dragIndex = parseInt(dragIndexStr, 10);
       const hoverIndex = index;
-      
+
       if (dragIndex !== hoverIndex) {
         onMove(dragIndex, hoverIndex);
       }
     }
   };
 
-  const alignClass = 
+  const alignClass =
     column.align === 'center' ? 'text-center' :
-    column.align === 'right' ? 'text-right' : 'text-left';
+      column.align === 'right' ? 'text-right' : 'text-left';
 
   const canSort = column.sortable && column.field && onSort;
 
@@ -103,9 +101,8 @@ function DraggableHeader({
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`px-6 py-4 ${alignClass} ${
-        isDragging ? 'opacity-30 bg-blue-50' : ''
-      } ${isOver ? 'bg-blue-100' : ''} transition-all bg-gray-50 cursor-move`}
+      className={`px-6 py-4 ${alignClass} ${isDragging ? 'opacity-30 bg-blue-50' : ''
+        } ${isOver ? 'bg-blue-100' : ''} transition-all bg-gray-50 cursor-move`}
     >
       <div className="flex items-center gap-2">
         <div className="hover:bg-gray-200 rounded p-1 transition-colors" title="Kéo để sắp xếp">
@@ -142,51 +139,51 @@ export function DraggableTable({
   const visibleColumns = columns.filter(c => c.visible);
 
   return (
-      <div className={`overflow-x-auto ${className}`}>
-        <table className="w-full">
-          <thead>
-            <tr>
-              {visibleColumns.map((column, index) => (
-                <DraggableHeader
-                  key={column.id}
-                  column={column}
-                  index={index}
-                  onMove={onColumnMove}
-                  onSort={onSort}
-                  sortField={sortField}
-                  sortOrder={sortOrder}
-                  renderSortIcon={renderSortIcon}
-                />
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {data.map((item, rowIndex) => (
-              <tr key={rowIndex} className="hover:bg-gray-50 transition-colors">
-                {visibleColumns.map((column) => {
-                  const alignClass = 
-                    column.align === 'center' ? 'text-center' :
-                    column.align === 'right' ? 'text-right' : 'text-left';
-                  
-                  return (
-                    <td key={column.id} className={`px-6 py-4 ${alignClass}`}>
-                      {column.render 
-                        ? column.render(item) 
-                        : column.field 
-                          ? item[column.field] 
-                          : '-'}
-                    </td>
-                  );
-                })}
-              </tr>
+    <div className={`overflow-x-auto ${className}`}>
+      <table className="w-full">
+        <thead>
+          <tr>
+            {visibleColumns.map((column, index) => (
+              <DraggableHeader
+                key={column.id}
+                column={column}
+                index={index}
+                onMove={onColumnMove}
+                onSort={onSort}
+                sortField={sortField}
+                sortOrder={sortOrder}
+                renderSortIcon={renderSortIcon}
+              />
             ))}
-          </tbody>
-        </table>
-        {data.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">Không có dữ liệu</p>
-          </div>
-        )}
-      </div>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200">
+          {data.map((item, rowIndex) => (
+            <tr key={rowIndex} className="hover:bg-gray-50 transition-colors">
+              {visibleColumns.map((column) => {
+                const alignClass =
+                  column.align === 'center' ? 'text-center' :
+                    column.align === 'right' ? 'text-right' : 'text-left';
+
+                return (
+                  <td key={column.id} className={`px-6 py-4 ${alignClass}`}>
+                    {column.render
+                      ? column.render(item)
+                      : column.field
+                        ? item[column.field]
+                        : '-'}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {data.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-gray-500">Không có dữ liệu</p>
+        </div>
+      )}
+    </div>
   );
 }

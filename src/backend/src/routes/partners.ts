@@ -1,9 +1,26 @@
 import { Router, Response } from 'express';
 import prisma from '../utils/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { auditService } from '../services/auditService';
 
 const router = Router();
 router.use(authenticate);
+
+// Helper function to calculate differences between objects
+function getChanges(oldVal: any, newVal: any) {
+    const changes: any = {};
+    if (!oldVal || !newVal) return null;
+
+    Object.keys(newVal).forEach(key => {
+        if (JSON.stringify(oldVal[key]) !== JSON.stringify(newVal[key])) {
+            changes[key] = {
+                old: oldVal[key],
+                new: newVal[key]
+            };
+        }
+    });
+    return Object.keys(changes).length > 0 ? changes : null;
+}
 
 // GET /api/partners
 router.get('/', async (req: AuthRequest, res: Response) => {
@@ -135,6 +152,17 @@ router.post('/', async (req: AuthRequest, res: Response) => {
             } as any
         });
 
+        // Audit Log for CREATE
+        await auditService.log({
+            tableName: 'Partner',
+            recordId: partner.id,
+            action: 'CREATE',
+            userId: req.user!.id,
+            newValues: partner,
+            ipAddress: req.ip as string,
+            userAgent: req.headers['user-agent'] as string
+        });
+
         res.status(201).json(partner);
     } catch (error: any) {
         console.error('Create partner error:', error);
@@ -151,6 +179,9 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 router.put('/:id', async (req: AuthRequest, res: Response) => {
     try {
         const { bankAccounts, contracts, businessUnits, paymentMethod, businessUnitIds, ...partnerData } = req.body as any;
+
+        const currentPartner = await prisma.partner.findUnique({ where: { id: req.params.id } });
+        if (!currentPartner) return res.status(404).json({ error: 'Partner not found' });
 
         const updateData: any = { ...partnerData };
 
@@ -188,6 +219,19 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
             } as any
         });
 
+        // Audit Log for UPDATE
+        await auditService.log({
+            tableName: 'Partner',
+            recordId: partner.id,
+            action: 'UPDATE',
+            userId: req.user!.id,
+            oldValues: currentPartner,
+            newValues: partner,
+            changes: getChanges(currentPartner, partner),
+            ipAddress: req.ip as string,
+            userAgent: req.headers['user-agent'] as string
+        });
+
         res.json(partner);
     } catch (error: any) {
         console.error('Update partner error:', error);
@@ -202,6 +246,9 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
 // PUT /api/partners/:id/deactivate
 router.put('/:id/deactivate', async (req: AuthRequest, res: Response) => {
     try {
+        const currentPartner = await prisma.partner.findUnique({ where: { id: req.params.id } });
+        if (!currentPartner) return res.status(404).json({ error: 'Partner not found' });
+
         const partner = await prisma.partner.update({
             where: { id: req.params.id as string },
             data: { status: 'INACTIVE' },
@@ -210,6 +257,19 @@ router.put('/:id/deactivate', async (req: AuthRequest, res: Response) => {
                 contracts: true,
                 businessUnits: true
             } as any
+        });
+
+        // Audit Log for UPDATE (Deactivate)
+        await auditService.log({
+            tableName: 'Partner',
+            recordId: partner.id,
+            action: 'UPDATE',
+            userId: req.user!.id,
+            oldValues: currentPartner,
+            newValues: partner,
+            reason: 'Deactivate partner',
+            ipAddress: req.ip as string,
+            userAgent: req.headers['user-agent'] as string
         });
 
         res.json(partner);
