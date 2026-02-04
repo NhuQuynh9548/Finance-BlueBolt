@@ -184,12 +184,27 @@ export function Header({ sidebarCollapsed }: HeaderProps) {
                         <div
                           key={notif.id}
                           onClick={() => {
+                            console.log('Notification clicked:', notif.id, 'relatedId:', notif.relatedId);
                             if (notif.unread) handleMarkAsRead(notif.id);
                             if (notif.relatedId) {
-                              // Always navigate to absolute path with highlight parameter
-                              // Add timestamp to force navigation even when already on the page
-                              navigate(`/quan-ly-thu-chi?highlight=${notif.relatedId}&t=${Date.now()}`);
                               setShowNotifications(false);
+
+                              // Check if we're already on the target page
+                              const isOnTargetPage = location.pathname === '/quan-ly-thu-chi';
+                              const targetUrl = `/quan-ly-thu-chi?highlight=${notif.relatedId}&t=${Date.now()}`;
+
+                              console.log('Navigating to:', targetUrl, 'Already on page:', isOnTargetPage);
+
+                              if (isOnTargetPage) {
+                                // If already on the page, first navigate away then back to force re-render
+                                navigate(location.pathname, { replace: true });
+                                setTimeout(() => {
+                                  navigate(targetUrl);
+                                }, 10);
+                              } else {
+                                // If on different page, navigate directly
+                                navigate(targetUrl);
+                              }
                             }
                           }}
                           className={`px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 ${notif.unread ? 'bg-blue-50' : ''

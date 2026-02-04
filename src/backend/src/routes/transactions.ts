@@ -203,11 +203,12 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         const atomicCode = `${buCode}_${typePrefix}${dateStr}_${seqStr}`;
         // ------------------------------
 
-        const { attachments, allocationPreviews, ...txnData } = data;
+        const { attachments, allocationPreviews, transactionDate, ...txnData } = data;
 
         const transaction = await prisma.transaction.create({
             data: {
                 ...txnData,
+                transactionDate: new Date(transactionDate),
                 transactionCode: atomicCode, // Override client code with atomic one
                 attachments: attachments ? {
                     create: attachments
@@ -243,7 +244,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 
         // Notify the creator
         try {
-            await (prisma as any).notification.create({
+            await prisma.notification.create({
                 data: {
                     userId: req.user!.id,
                     message: `Bạn đã tạo phiếu ${data.transactionType === 'INCOME' ? 'thu' : 'chi'} #${atomicCode} thành công`,
@@ -309,6 +310,7 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
             where: { id },
             data: {
                 ...txnData,
+                transactionDate: txnData.transactionDate ? new Date(txnData.transactionDate) : undefined,
                 attachments: attachments ? {
                     deleteMany: {},
                     create: attachments

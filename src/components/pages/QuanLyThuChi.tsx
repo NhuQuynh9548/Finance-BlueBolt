@@ -80,20 +80,20 @@ interface ColumnConfig {
 }
 
 const DEFAULT_COLUMNS: ColumnConfig[] = [
+  { id: 'actions_left', label: 'Hành động', sortable: false, align: 'center', width: 100, visible: true },
   { id: 'transactionDate', label: 'Ngày CT', sortable: true, align: 'left', width: 120, visible: true },
   { id: 'transactionCode', label: 'Mã GD', sortable: true, align: 'left', width: 120, visible: true },
-  { id: 'businessUnit', label: 'Đơn vị (BU)', sortable: false, align: 'left', width: 150, visible: true },
-  { id: 'category', label: 'Danh mục', sortable: false, align: 'left', width: 150, visible: true },
+  { id: 'businessUnit', label: 'Đơn vị', sortable: false, align: 'left', width: 150, visible: true },
   { id: 'transactionType', label: 'Loại', sortable: false, align: 'left', width: 100, visible: true },
   { id: 'objectName', label: 'Đối tượng', sortable: false, align: 'left', width: 150, visible: true },
   { id: 'project', label: 'Dự án', sortable: false, align: 'left', width: 150, visible: true },
   { id: 'amount', label: 'Số tiền', sortable: true, align: 'right', width: 140, visible: true },
   { id: 'paymentMethod', label: 'PT Thanh Toán', sortable: false, align: 'left', width: 140, visible: true },
-  { id: 'paymentStatus', label: 'TT', sortable: false, align: 'left', width: 130, visible: true },
+  { id: 'attachments', label: 'Chứng từ', sortable: false, align: 'center', width: 100, visible: true },
+  { id: 'paymentStatus', label: 'Trạng thái', sortable: false, align: 'left', width: 130, visible: true },
   { id: 'approvalStatus', label: 'Phê duyệt', sortable: false, align: 'left', width: 130, visible: true },
   { id: 'creator', label: 'Người tạo', sortable: false, align: 'left', width: 140, visible: true },
   { id: 'description', label: 'Ghi chú', sortable: false, align: 'left', width: 250, visible: true },
-  { id: 'actions', label: 'Hành động', sortable: false, align: 'center', width: 120, visible: true },
 ];
 
 export function QuanLyThuChi() {
@@ -185,8 +185,9 @@ export function QuanLyThuChi() {
           }
         });
 
-        // Filter out costAllocation in case it's still in the user's localStorage
-        const filtered = newColumns.filter((col: ColumnConfig) => col.id !== 'costAllocation');
+        // Filter out columns that are no longer in DEFAULT_COLUMNS (e.g., actions_right, actions, costAllocation)
+        const activeIds = new Set(DEFAULT_COLUMNS.map(c => c.id));
+        const filtered = newColumns.filter((col: ColumnConfig) => activeIds.has(col.id));
         setColumns(filtered);
       } catch (e) {
         console.error('Error parsing saved columns:', e);
@@ -342,51 +343,92 @@ export function QuanLyThuChi() {
     const params = new URLSearchParams(location.search);
     const highlightId = params.get('highlight');
 
-    if (highlightId && !loading) {
+    console.log('Highlight effect triggered:', { highlightId, loading, transactionsCount: transactions.length });
+
+    if (!highlightId || loading) return;
+
+    const processHighlight = async () => {
+      console.log('Processing highlight for transaction:', highlightId);
+
       // First, try to find in current transactions
       let txn = transactions.find(t => t.id === highlightId);
 
-      // If not found in filtered list, try to find in all transactions
-      if (!txn && allTransactions.length > 0) {
-        txn = allTransactions.find(t => t.id === highlightId);
+      // If not found in filtered list, it might be due to date/BU/type filters
+      if (!txn) {
+        console.log('Transaction not found in current list, fetching details...');
+        try {
+          // Fetch the full transaction data to know its date and BU
+          txn = await transactionService.getById(highlightId);
+          console.log('Transaction details fetched:', !!txn, txn?.transactionCode);
 
-        // If found in allTransactions but not in filtered transactions,
-        // we need to adjust filters to show it
-        if (txn) {
-          // Adjust filters to show this transaction
-          setFilterType(txn.transactionType);
-          setFilterStatus('all'); // Show all statuses
-          // Keep current BU filter or set to transaction's BU
-          if (filterBU !== 'all' && filterBU !== txn.businessUnitId) {
-            setFilterBU(txn.businessUnitId);
+          if (txn) {
+            // Check if we need to adjust filters
+            let needsReload = false;
+
+            // 1. BU Filter
+            if (filterBU !== 'all' && filterBU !== txn.businessUnitId) {
+              console.log('Adjusting BU filter');
+              setFilterBU(txn.businessUnitId);
+              needsReload = true;
+            }
+
+            // 2. Type Filter
+            if (filterType !== 'all' && filterType !== txn.transactionType) {
+              console.log('Adjusting Type filter');
+              setFilterType(txn.transactionType);
+              needsReload = true;
+            }
+
+            // 3. Status Filter (Hide REJECTED transactions? No, show all if highlighting)
+            if (filterStatus !== 'all' && txn.approvalStatus !== filterStatus) {
+              console.log('Adjusting Status filter');
+              setFilterStatus('all');
+              needsReload = true;
+            }
+
+            // 4. Date Filter - CRITICAL FIX
+            const range = getTransactionRange(timeRange);
+            const txnDate = new Date(txn.transactionDate);
+            if (!range || txnDate < range.start || txnDate > range.end) {
+              console.log('Adjusting Date filter to include transaction date:', txn.transactionDate);
+              setTimeRange('CUSTOM');
+              // Set range to just this day
+              setCustomStartDate(txn.transactionDate.split('T')[0]);
+              setCustomEndDate(txn.transactionDate.split('T')[0]);
+              needsReload = true;
+            }
+
+            // 5. Search Filter
+            if (searchTerm !== '') {
+              console.log('Clearing search term');
+              setSearchTerm('');
+              setDebouncedSearch('');
+              needsReload = true;
+            }
+
+            if (needsReload) {
+              console.log('Filters adjusted, waiting for reload...');
+              // The effect will run again after fetchData completes
+              return;
+            }
           }
-
-          // Wait for filters to update and data to reload
-          // The highlight will be applied in the next render after fetchData completes
-          setTimeout(() => {
-            setHighlightedTxnId(highlightId);
-
-            // Scroll after a delay to ensure the row is rendered
-            setTimeout(() => {
-              const rowElement = document.getElementById(`txn-row-${highlightId}`);
-              if (rowElement) {
-                rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }
-            }, 500);
-
-            // Remove highlight after animation completes (5 seconds)
-            setTimeout(() => {
-              setHighlightedTxnId(null);
-            }, 5500);
-          }, 100);
+        } catch (err) {
+          console.error('Error fetching transaction for highlighting:', err);
         }
-      } else if (txn) {
-        // Transaction is already in the filtered list
-        // Now we need to find which page it's on
-        // We need to recalculate the sorted list to find the transaction's position
+      }
 
-        // Apply the same filtering and sorting logic
+      if (txn) {
+        console.log('Transaction found or filters already correct:', txn.transactionCode);
+
+        // Ensure search is clear even if txn was found (to avoid confusion)
+        if (searchTerm !== '') {
+          setSearchTerm('');
+          setDebouncedSearch('');
+        }
+        // Apply the same filtering and sorting logic as the table
         const filtered = transactions.filter(t => {
+          if (t.approvalStatus === 'REJECTED') return false;
+
           const searchLower = debouncedSearch.toLowerCase();
           const matchCode = t.transactionCode?.toLowerCase().includes(searchLower);
           const matchDesc = t.description?.toLowerCase().includes(searchLower);
@@ -396,53 +438,57 @@ export function QuanLyThuChi() {
         });
 
         const sorted = [...filtered].sort((a, b) => {
-          if (filterType === 'all') {
-            const dateA = new Date(a.transactionDate).getTime();
-            const dateB = new Date(b.transactionDate).getTime();
-            return dateB - dateA;
+          if (!sortField || !sortOrder) {
+            if (filterType === 'all') {
+              return new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime();
+            }
+            return (a.transactionCode || '').localeCompare(b.transactionCode || '');
           }
-          if (filterType === 'INCOME' || filterType === 'EXPENSE' || filterType === 'LOAN') {
-            const codeA = a.transactionCode || '';
-            const codeB = b.transactionCode || '';
-            return codeA.localeCompare(codeB);
+
+          let valA: any = (a as any)[sortField];
+          let valB: any = (b as any)[sortField];
+          if (sortField === 'transactionDate') {
+            valA = new Date(valA).getTime();
+            valB = new Date(valB).getTime();
           }
+          if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+          if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
           return 0;
         });
 
-        // Find the index of the transaction in the sorted list
         const txnIndex = sorted.findIndex(t => t.id === highlightId);
+        console.log('Transaction index:', txnIndex, 'Page size:', itemsPerPage);
 
         if (txnIndex !== -1) {
-          // Calculate which page the transaction is on
           const pageNumber = Math.floor(txnIndex / itemsPerPage) + 1;
-
-          // Navigate to that page
           if (pageNumber !== currentPage) {
+            console.log('Navigating to page:', pageNumber);
             setCurrentPage(pageNumber);
           }
 
-          // Set highlighted transaction
           setHighlightedTxnId(highlightId);
 
-          // Scroll to the transaction row after a short delay to ensure rendering
+          // Scroll after render
           setTimeout(() => {
             const rowElement = document.getElementById(`txn-row-${highlightId}`);
             if (rowElement) {
               rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
-          }, 300);
+          }, 500);
 
-          // Remove highlight after animation completes (5 seconds)
-          setTimeout(() => {
-            setHighlightedTxnId(null);
-          }, 5000);
+          // Remove highlight after animation
+          setTimeout(() => setHighlightedTxnId(null), 5000);
         }
+      } else {
+        console.log('Transaction not found anywhere or after adjustment');
       }
 
-      // Clean up URL to prevent re-highlighting on next render
+      // Clean up URL to prevent infinite loop
       navigate(location.pathname, { replace: true });
-    }
-  }, [location.search, transactions, allTransactions, loading, navigate, location.pathname, filterBU, debouncedSearch, filterType, currentPage, itemsPerPage]);
+    };
+
+    processHighlight();
+  }, [location.search, loading, transactions.length]);
 
   // Debounce Search
   useEffect(() => {
@@ -1106,13 +1152,13 @@ export function QuanLyThuChi() {
               {/* Left: Search & Dropdowns */}
               <div className="flex flex-1 gap-3 w-full lg:w-auto">
                 <div className="relative flex-1 min-w-[300px]">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                   <input
                     type="text"
                     placeholder="Tìm kiếm theo Mã GD, Đối tượng, Danh mục, Dự án..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
                 </div>
                 <div className="flex bg-gray-100 p-0.5 rounded-lg border border-gray-200">
@@ -1330,18 +1376,22 @@ export function QuanLyThuChi() {
                             {txn.transactionType === 'INCOME' ? '+' : '-'}{formatCurrency(txn.amount)}
                           </td>
                         );
-                        if (col.id === 'paymentStatus') return <td className="px-6 py-4 text-sm text-gray-700">
-                          <div className="flex items-center gap-2">
-                            <span>
-                              {txn.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán'}
-                            </span>
-                            {txn.attachments && txn.attachments.length > 0 && (
-                              <div className="flex items-center gap-1 text-gray-400" title={`${txn.attachments.length} chứng từ đính kèm`}>
+                        if (col.id === 'attachments') return (
+                          <td className="px-6 py-4 text-center">
+                            {txn.attachments && txn.attachments.length > 0 ? (
+                              <div className="flex items-center justify-center gap-1 text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-100" title={`${txn.attachments.length} chứng từ đính kèm`}>
                                 <Paperclip className="w-3.5 h-3.5" />
                                 <span className="text-[11px] font-bold">{txn.attachments.length}</span>
                               </div>
+                            ) : (
+                              <span className="text-gray-300">-</span>
                             )}
-                          </div>
+                          </td>
+                        );
+                        if (col.id === 'paymentStatus') return <td className="px-6 py-4 text-sm text-gray-700">
+                          <span>
+                            {txn.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                          </span>
                         </td>;
                         if (col.id === 'approvalStatus') return <td className="px-6 py-4">{getStatusBadge(txn.approvalStatus)}</td>;
                         if (col.id === 'creator') return (
@@ -1349,7 +1399,7 @@ export function QuanLyThuChi() {
                             {txn.creator?.fullName || txn.creator?.name || 'Hệ thống'}
                           </td>
                         );
-                        if (col.id === 'actions') return (
+                        if (col.id === 'actions_left' || col.id === 'actions_right' || col.id === 'actions') return (
                           <td className="px-6 py-4 text-center">
                             <div className="flex justify-center gap-2">
                               <button onClick={() => handleView(txn)} className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors" title="Xem chi tiết"><Eye className="w-4 h-4" /></button>
@@ -1358,7 +1408,6 @@ export function QuanLyThuChi() {
                                 const userRole = currentUser?.role?.toLowerCase();
                                 const canEditApproved = userRole === 'admin' || userRole === 'ceo';
                                 const canEdit = txn.approvalStatus !== 'APPROVED' || canEditApproved;
-                                const canApprove = userRole === 'admin' || userRole === 'ceo' || userRole === 'trưởng bu';
 
                                 if (canEdit) {
                                   return (

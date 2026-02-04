@@ -1,12 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { TrendingUp, TrendingDown, DollarSign, Percent, Eye, X, BarChart3, Filter, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Percent, Eye, X, BarChart3, Filter, Calendar, ArrowUpDown } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useApp } from '../../contexts/AppContext';
 import { dashboardService } from '../../services/dashboardService';
 import { transactionService } from '../../services/transactionService';
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const { selectedBU, canSelectBU, currentUser, availableBUs } = useApp();
 
   const [stats, setStats] = useState<any>(null);
@@ -28,6 +30,8 @@ export function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
   const [categoryTransactions, setCategoryTransactions] = useState<any[]>([]);
   const [loadingCategoryData, setLoadingCategoryData] = useState(false);
+  const [categorySortField, setCategorySortField] = useState<'date' | 'amount'>('date');
+  const [categorySortOrder, setCategorySortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Helper to format date for API (YYYY-MM-DD)
   const formatDateForApi = (date: Date) => {
@@ -895,12 +899,12 @@ export function Dashboard() {
         >
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="border-b border-gray-200 px-6 py-5 flex items-start justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-gray-800">
+            <div className="border-b border-gray-200 px-6 py-5 relative">
+              <div className="text-center">
+                <h2 className="text-xl font-black text-gray-800 uppercase tracking-wide">
                   {selectedCategory?.name}
                 </h2>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm font-semibold text-gray-500 mt-1">
                   {selectedBUName} • {(() => {
                     const range = getDateRange();
                     return `${range.start.toLocaleDateString('vi-VN')} - ${range.end.toLocaleDateString('vi-VN')}`;
@@ -909,7 +913,7 @@ export function Dashboard() {
               </div>
               <button
                 onClick={() => setShowCategoryModal(false)}
-                className="p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
+                className="absolute right-6 top-1/2 -translate-y-1/2 p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />
@@ -923,48 +927,102 @@ export function Dashboard() {
                   <div className="w-10 h-10 border-4 border-gray-100 border-t-[#004aad] rounded-full animate-spin"></div>
                   <p className="text-gray-400 font-medium">Đang tải dữ liệu...</p>
                 </div>
-              ) : categoryTransactions.length > 0 ? (
-                <div className="overflow-hidden border border-gray-100 rounded-xl bg-white shadow-sm">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-bold text-gray-700">Ngày</th>
-                        <th className="px-4 py-3 text-left font-bold text-gray-700">Mã giao dịch</th>
-                        <th className="px-4 py-3 text-left font-bold text-gray-700">BU</th>
-                        <th className="px-4 py-3 text-right font-bold text-gray-700">Số tiền</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {categoryTransactions.map((txn) => (
-                        <tr key={txn.id} className="hover:bg-blue-50/50 transition-colors">
-                          <td className="px-4 py-3 whitespace-nowrap text-gray-600">
-                            {new Date(txn.transactionDate).toLocaleDateString('vi-VN')}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="font-mono text-[11px] font-bold text-[#004aad] bg-blue-50 px-2 py-1 rounded border border-blue-100">
-                              {txn.transactionCode}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-gray-600">
-                            {txn.businessUnit?.name || '-'}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-right font-bold text-red-600 tabular-nums">
-                            {formatCurrency(txn.amount)}
+              ) : categoryTransactions.length > 0 ? (() => {
+                // Sort transactions based on current sort settings
+                const sortedTransactions = [...categoryTransactions].sort((a, b) => {
+                  if (categorySortField === 'date') {
+                    const dateA = new Date(a.transactionDate).getTime();
+                    const dateB = new Date(b.transactionDate).getTime();
+                    return categorySortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+                  } else {
+                    return categorySortOrder === 'asc' ? a.amount - b.amount : b.amount - a.amount;
+                  }
+                });
+
+                const handleSort = (field: 'date' | 'amount') => {
+                  if (categorySortField === field) {
+                    setCategorySortOrder(categorySortOrder === 'asc' ? 'desc' : 'asc');
+                  } else {
+                    setCategorySortField(field);
+                    setCategorySortOrder('asc');
+                  }
+                };
+
+                const SortIcon = ({ field }: { field: 'date' | 'amount' }) => {
+                  if (categorySortField !== field) {
+                    return <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />;
+                  }
+                  return categorySortOrder === 'asc' ?
+                    <TrendingUp className="w-3.5 h-3.5 text-[#004aad]" /> :
+                    <TrendingDown className="w-3.5 h-3.5 text-[#004aad]" />;
+                };
+
+                return (
+                  <div className="overflow-hidden border border-gray-100 rounded-xl bg-white shadow-sm">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th
+                            className="px-4 py-3 text-left font-bold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                            onClick={() => handleSort('date')}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              Ngày
+                              <SortIcon field="date" />
+                            </div>
+                          </th>
+                          <th className="px-4 py-3 text-left font-bold text-gray-700">Mã giao dịch</th>
+                          <th className="px-4 py-3 text-left font-bold text-gray-700">BU</th>
+                          <th
+                            className="px-4 py-3 text-right font-bold text-gray-700 cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                            onClick={() => handleSort('amount')}
+                          >
+                            <div className="flex items-center justify-end gap-1.5">
+                              Số tiền
+                              <SortIcon field="amount" />
+                            </div>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {sortedTransactions.map((txn) => (
+                          <tr key={txn.id} className="hover:bg-blue-50/50 transition-colors">
+                            <td className="px-4 py-3 whitespace-nowrap text-gray-600">
+                              {new Date(txn.transactionDate).toLocaleDateString('vi-VN')}
+                            </td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => {
+                                  setShowCategoryModal(false);
+                                  navigate(`/quan-ly-thu-chi?highlight=${txn.id}&t=${Date.now()}`);
+                                }}
+                                className="font-mono text-[11px] font-bold text-[#004aad] bg-blue-50 px-2 py-1 rounded border border-blue-100 hover:bg-blue-100 hover:border-blue-200 transition-all cursor-pointer text-left"
+                                title="Xem chi tiết phiếu"
+                              >
+                                {txn.transactionCode}
+                              </button>
+                            </td>
+                            <td className="px-4 py-3 text-gray-600">
+                              {txn.businessUnit?.name || '-'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-right font-bold text-red-600 tabular-nums">
+                              {formatCurrency(txn.amount)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-gray-50 border-t-2 border-gray-100">
+                        <tr className="font-bold text-gray-900">
+                          <td colSpan={3} className="px-4 py-4 text-right text-xs uppercase tracking-wider">Tổng cộng:</td>
+                          <td className="px-4 py-4 text-right text-red-600 text-base">
+                            {formatCurrency(categoryTransactions.reduce((sum, t) => sum + t.amount, 0))}
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
-                    <tfoot className="bg-gray-50 border-t-2 border-gray-100">
-                      <tr className="font-bold text-gray-900">
-                        <td colSpan={3} className="px-4 py-4 text-right text-xs uppercase tracking-wider">Tổng cộng:</td>
-                        <td className="px-4 py-4 text-right text-red-600 text-base">
-                          {formatCurrency(categoryTransactions.reduce((sum, t) => sum + t.amount, 0))}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              ) : (
+                      </tfoot>
+                    </table>
+                  </div>
+                );
+              })() : (
                 <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-50">
                   <BarChart3 className="w-12 h-12 text-gray-300" />
                   <p className="text-gray-500 font-medium">Không tìm thấy giao dịch nào.</p>
@@ -978,13 +1036,7 @@ export function Dashboard() {
                 onClick={() => setShowCategoryModal(false)}
                 className="px-8 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium min-w-[140px]"
               >
-                Hủy bỏ
-              </button>
-              <button
-                onClick={() => setShowCategoryModal(false)}
-                className="px-8 py-2.5 bg-[#004aad] hover:bg-[#1557A0] text-white rounded-lg transition-colors font-medium min-w-[140px]"
-              >
-                Xác nhận
+                Đóng
               </button>
             </div>
           </div>
