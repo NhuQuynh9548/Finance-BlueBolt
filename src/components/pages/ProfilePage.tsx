@@ -119,7 +119,7 @@ export function ProfilePage() {
                             <div className="w-40 h-40 p-4 rounded-full border-4 border-gray-100 shadow-sm flex items-center justify-center overflow-hidden bg-[#004aad] mx-auto">
                                 {(previewUrl || avatarInputUrl || currentUser.avatar) ? (
                                     <img
-                                        src={(previewUrl || (avatarTab === 'url' ? avatarInputUrl : currentUser.avatar)) ?? undefined}
+                                        src={previewUrl || (avatarTab === 'url' ? avatarInputUrl : uploadService.getAbsoluteUrl(currentUser.avatar)) || undefined}
                                         alt={currentUser.name}
                                         className="w-full h-full object-cover rounded-full"
                                     />

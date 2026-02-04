@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, Plus, Eye, Edit2, Trash2, DollarSign, X, AlertCircle, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Save, Calendar, Building2, FileText, Paperclip, TrendingUp, TrendingDown, RefreshCw, ChevronDown, ChevronUp, User, Users, Upload, Printer, Send, CheckCircle, XCircle, Image as ImageIcon, ExternalLink, Briefcase, RotateCcw, Settings, GripVertical, Layers, Download, History } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import * as XLSX from 'xlsx';
+import { uploadService } from '../../services/uploadService';
 import { transactionService } from '../../services/transactionService';
 import { categoryService } from '../../services/categoryService';
 import { projectService } from '../../services/projectService';
@@ -13,7 +14,6 @@ import { employeeService } from '../../services/employeeService';
 import { businessUnitService } from '../../services/businessUnitService';
 import { paymentMethodService } from '../../services/paymentMethodService';
 import { allocationRuleService } from '../../services/allocationRuleService';
-import { uploadService } from '../../services/uploadService';
 import { auditLogService } from '../../services/auditLogService';
 
 
@@ -153,27 +153,6 @@ export function QuanLyThuChi() {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
-
-  // Helper to get absolute backend URL
-  const getAbsoluteUrl = (url: string) => {
-    if (!url) return '';
-    if (url.startsWith('http')) return url;
-
-    const envApiUrl = (import.meta as any).env.VITE_API_URL;
-    if (envApiUrl) {
-      // If VITE_API_URL is "http://domain.com/api" and url is "/api/uploads/...", 
-      // replace('/api', '') would make it "http://domain.com/api/uploads/..." which is correct.
-      const baseUrl = envApiUrl.replace('/api', '');
-      return `${baseUrl}${url}`;
-    }
-
-    // If no VITE_API_URL, and we're not on localhost, assume same origin (proxied)
-    if (window.location.hostname !== 'localhost') {
-      return `${window.location.origin}${url}`;
-    }
-
-    return `http://localhost:5000${url}`;
-  };
 
 
   // Load columns from localStorage on mount
@@ -817,7 +796,7 @@ export function QuanLyThuChi() {
 
   const handleDownloadFile = async (fileUrl: string, fileName: string) => {
     try {
-      const absoluteUrl = getAbsoluteUrl(fileUrl);
+      const absoluteUrl = uploadService.getAbsoluteUrl(fileUrl);
       console.log('Downloading file from:', absoluteUrl);
       const response = await fetch(absoluteUrl);
 
@@ -1857,7 +1836,7 @@ export function QuanLyThuChi() {
                                 <div className="aspect-video bg-gray-200 flex items-center justify-center overflow-hidden">
                                   {file.fileType.startsWith('image/') ? (
                                     <img
-                                      src={file.fileUrl}
+                                      src={uploadService.getAbsoluteUrl(file.fileUrl)}
                                       alt={file.fileName}
                                       className="w-full h-full object-cover transition-transform group-hover:scale-110"
                                     />
@@ -1868,7 +1847,7 @@ export function QuanLyThuChi() {
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        const viewerUrl = `/document-viewer?url=${encodeURIComponent(getAbsoluteUrl(file.fileUrl))}&name=${encodeURIComponent(file.fileName)}&type=${encodeURIComponent(file.fileType)}`;
+                                        const viewerUrl = `/document-viewer?url=${encodeURIComponent(uploadService.getAbsoluteUrl(file.fileUrl))}&name=${encodeURIComponent(file.fileName)}&type=${encodeURIComponent(file.fileType)}`;
                                         window.open(viewerUrl, '_blank');
                                       }}
                                       className="p-2 bg-white rounded-full text-blue-600 hover:bg-blue-50 transition-colors"
