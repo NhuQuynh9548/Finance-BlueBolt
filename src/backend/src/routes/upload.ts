@@ -48,7 +48,7 @@ router.post('/', upload.array('files'), (req: AuthRequest, res: Response) => {
             fileName: file.originalname,
             fileSize: file.size,
             fileType: file.mimetype,
-            fileUrl: `/uploads/${file.filename}`
+            fileUrl: `/api/uploads/${file.filename}`
         }));
 
         res.json(files);

@@ -158,8 +158,21 @@ export function QuanLyThuChi() {
   const getAbsoluteUrl = (url: string) => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
-    const baseUrl = (import.meta as any).env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
-    return `${baseUrl}${url}`;
+
+    const envApiUrl = (import.meta as any).env.VITE_API_URL;
+    if (envApiUrl) {
+      // If VITE_API_URL is "http://domain.com/api" and url is "/api/uploads/...", 
+      // replace('/api', '') would make it "http://domain.com/api/uploads/..." which is correct.
+      const baseUrl = envApiUrl.replace('/api', '');
+      return `${baseUrl}${url}`;
+    }
+
+    // If no VITE_API_URL, and we're not on localhost, assume same origin (proxied)
+    if (window.location.hostname !== 'localhost') {
+      return `${window.location.origin}${url}`;
+    }
+
+    return `http://localhost:5000${url}`;
   };
 
 
