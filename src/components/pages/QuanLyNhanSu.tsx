@@ -689,7 +689,7 @@ export function QuanLyNhanSu() {
           {/* Create/View/Edit Modal */}
           {modalMode && (
             <div className="fixed inset-0 bg-black/40 z-[999999] flex items-center justify-center p-4 animate-in fade-in duration-300">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                 {/* Modal Header */}
                 <div className="border-b border-gray-200 px-6 py-5 flex items-start justify-between bg-white">
                   <div>
@@ -712,7 +712,7 @@ export function QuanLyNhanSu() {
                 </div>
 
                 {/* Modal Body - Scrollable */}
-                <div className="overflow-y-auto max-h-[calc(90vh-180px)] px-6 py-6">
+                <div className="overflow-y-auto flex-1 px-6 py-6">
                   <form onSubmit={handleSubmit} id="employee-form">
                     <div className="space-y-5">
                       {/* Row 1: Mã NV & Trạng thái */}

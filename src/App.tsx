@@ -82,18 +82,13 @@ export default function App() {
           <DndWrapper>
             <Router>
               <Routes>
-                {/* Public Route */}
+                {/* Public Routes */}
                 <Route path="/login" element={<LoginPage />} />
+                
+                {/* Document Viewer - Public access for opening in new tabs */}
+                <Route path="/document-viewer" element={<DocumentViewer />} />
 
                 {/* Protected Routes */}
-                <Route
-                  path="/document-viewer"
-                  element={
-                    <ProtectedRoute>
-                      <DocumentViewer />
-                    </ProtectedRoute>
-                  }
-                />
                 <Route
                   path="/*"
                   element={

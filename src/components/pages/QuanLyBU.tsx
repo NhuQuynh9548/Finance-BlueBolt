@@ -485,7 +485,7 @@ export function QuanLyBU() {
       {/* Add/Edit Modal - Centered Popup */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
             <div className="border-b border-gray-200 px-6 py-5">
               <div className="flex items-start justify-between">
@@ -507,7 +507,7 @@ export function QuanLyBU() {
             </div>
 
             {/* Modal Body - Scrollable */}
-            <div className="overflow-y-auto max-h-[calc(90vh-180px)] px-6 py-6">
+            <div className="overflow-y-auto flex-1 px-6 py-6">
               <form onSubmit={handleSubmit} id="bu-form">
                 <div className="space-y-5">
                   {/* Disable fields that cannot be edited via BU API */}

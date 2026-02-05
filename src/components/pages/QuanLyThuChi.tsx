@@ -128,6 +128,7 @@ export function QuanLyThuChi() {
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [modalType, setModalType] = useState<'INCOME' | 'EXPENSE' | 'LOAN'>('INCOME');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [previewAttachmentsTxn, setPreviewAttachmentsTxn] = useState<Transaction | null>(null);
 
   // Local Form Data
   const [formData, setFormData] = useState<Partial<Transaction>>({});
@@ -1371,10 +1372,23 @@ export function QuanLyThuChi() {
                         if (col.id === 'attachments') return (
                           <td className="px-6 py-4 text-center">
                             {txn.attachments && txn.attachments.length > 0 ? (
-                              <div className="flex items-center justify-center gap-1 text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-100" title={`${txn.attachments.length} chứng từ đính kèm`}>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (txn.attachments && txn.attachments.length === 1) {
+                                    const file = txn.attachments[0];
+                                    const viewerUrl = `/document-viewer?url=${encodeURIComponent(uploadService.getAbsoluteUrl(file.fileUrl))}&name=${encodeURIComponent(file.fileName)}&type=${encodeURIComponent(file.fileType)}`;
+                                    window.open(viewerUrl, '_blank');
+                                  } else {
+                                    setPreviewAttachmentsTxn(txn);
+                                  }
+                                }}
+                                className="flex items-center justify-center gap-1 text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-100 hover:bg-blue-100 transition-colors"
+                                title={txn.attachments && txn.attachments.length === 1 ? "Click để xem chứng từ" : `${txn.attachments?.length} chứng từ đính kèm - Click để chọn`}
+                              >
                                 <Paperclip className="w-3.5 h-3.5" />
                                 <span className="text-[11px] font-bold">{txn.attachments.length}</span>
-                              </div>
+                              </button>
                             ) : (
                               <span className="text-gray-300">-</span>
                             )}
@@ -2018,7 +2032,7 @@ export function QuanLyThuChi() {
             </div>
 
             {/* Content Area */}
-            <div className="overflow-y-auto max-h-[calc(90vh-180px)] px-6 py-6 bg-white">
+            <div className="overflow-y-auto flex-1 px-6 py-6 bg-white">
               {auditLogs.length === 0 ? (
                 <div className="text-center py-20 flex flex-col items-center justify-center gap-4 opacity-50">
                   <History className="w-12 h-12 text-gray-300" />
@@ -2111,6 +2125,91 @@ export function QuanLyThuChi() {
               <button
                 onClick={handleCloseAuditLog}
                 className="px-10 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium min-w-[140px]"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Quick Attachment Preview Modal */}
+      {previewAttachmentsTxn && (
+        <div className="fixed inset-0 bg-black/60 z-[999999] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="border-b border-gray-100 px-6 py-4 flex items-center justify-between bg-white">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-50 rounded-lg">
+                  <Paperclip className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-800">Chứng từ đính kèm</h2>
+                  <p className="text-xs text-gray-500 font-medium">Mã giao dịch: {previewAttachmentsTxn.transactionCode}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPreviewAttachmentsTxn(null)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 bg-gray-50/50">
+              <div className="grid grid-cols-2 gap-4">
+                {previewAttachmentsTxn.attachments?.map((file, idx) => (
+                  <div key={file.id || idx} className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
+                    <div className="aspect-[4/3] bg-gray-100 relative overflow-hidden flex items-center justify-center">
+                      {file.fileType.startsWith('image/') ? (
+                        <img
+                          src={uploadService.getAbsoluteUrl(file.fileUrl)}
+                          alt={file.fileName}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center gap-2">
+                          <FileText className="w-12 h-12 text-gray-300" />
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{file.fileType.split('/')[1] || 'FILE'}</span>
+                        </div>
+                      )}
+
+                      {/* Overlay Actions */}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                        <button
+                          onClick={() => {
+                            const viewerUrl = `/document-viewer?url=${encodeURIComponent(uploadService.getAbsoluteUrl(file.fileUrl))}&name=${encodeURIComponent(file.fileName)}&type=${encodeURIComponent(file.fileType)}`;
+                            window.open(viewerUrl, '_blank');
+                          }}
+                          className="p-2.5 bg-white rounded-full text-blue-600 hover:bg-blue-50 transition-colors shadow-lg"
+                          title="Xem chi tiết"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDownloadFile(file.fileUrl, file.fileName)}
+                          className="p-2.5 bg-white rounded-full text-green-600 hover:bg-green-50 transition-colors shadow-lg"
+                          title="Tải xuống"
+                        >
+                          <Download className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="p-3 border-t border-gray-50">
+                      <p className="text-xs font-bold text-gray-700 truncate mb-0.5" title={file.fileName}>
+                        {file.fileName}
+                      </p>
+                      <p className="text-[10px] text-gray-400 font-medium">
+                        {(Number(file.fileSize) / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-gray-100 px-6 py-4 bg-gray-50/30 flex justify-end">
+              <button
+                onClick={() => setPreviewAttachmentsTxn(null)}
+                className="px-6 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors shadow-sm"
               >
                 Đóng
               </button>

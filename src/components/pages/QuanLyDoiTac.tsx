@@ -678,7 +678,7 @@ export function QuanLyDoiTac() {
               </div>
             </div>
 
-            <div className="overflow-y-auto max-h-[calc(90vh-200px)] px-6 py-6 scrollbar-thin scrollbar-thumb-gray-300">
+            <div className="overflow-y-auto flex-1 px-6 py-6 scrollbar-thin scrollbar-thumb-gray-300">
               <form onSubmit={handleSubmit} id="partner-form">
                 {activeTab === 'info' && (
                   <div className="space-y-6">

@@ -295,7 +295,7 @@ export function ChuyenMonVaiTro() {
               </div>
             </div>
 
-            <div className="overflow-y-auto max-h-[calc(90vh-180px)] px-6 py-6">
+            <div className="overflow-y-auto flex-1 px-6 py-6">
               <form onSubmit={handleSubmit} id="role-form">
                 <div className="space-y-5">
                   <div className="grid grid-cols-2 gap-4">
